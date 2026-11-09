@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>豆ミル 地球儀の試作</title>
+<title>豆ミル</title>
 <meta name="theme-color" content="#DCE0C4">
-<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
-<link href="https://api.mapbox.com/mapbox-gl-js/v3.9.0/mapbox-gl.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <style>
 :root{
   --paper:#DCE0C4; --sheet:#F0F1E2; --line:#C4C8A8;
@@ -18,43 +18,83 @@
   --gothic:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{height:100%;margin:0}
 body{background:var(--paper);color:var(--ink);font:400 15px/1.6 var(--gothic);overflow:hidden}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
 :focus-visible{outline:2px solid var(--cherry);outline-offset:2px}
-#app{height:100vh;height:100dvh;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) min(47dvh,400px)}
+#app{height:100vh;height:100dvh;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) min(50dvh,430px)}
 #stage{position:relative;min-height:0}
 #map{position:absolute;inset:0}
 #brand{position:absolute;left:16px;top:calc(12px + env(safe-area-inset-top));pointer-events:none}
 #brand b{display:block;font:700 26px/1.2 var(--mincho);letter-spacing:.06em;text-shadow:0 0 6px var(--paper),0 0 3px var(--paper),0 0 1px var(--paper)}
+#moreBtn{position:absolute;right:12px;top:calc(10px + env(safe-area-inset-top));min-height:40px;padding:0 14px;border-radius:20px;background:var(--sheet);font-size:13px}
 .float{position:absolute;right:12px;bottom:28px;min-height:44px;padding:0 16px;border-radius:22px;background:var(--ink);color:var(--sheet);font-size:14px}
-#notice{position:absolute;left:12px;right:12px;top:84px;padding:10px 12px;background:var(--sheet);border:1px solid var(--cherry);border-radius:4px;font-size:13px}
-#sheet{background:var(--sheet);display:flex;flex-direction:column;min-height:0;padding-bottom:env(safe-area-inset-bottom);border-top:1px solid var(--line)}
+#notice{position:absolute;left:12px;right:12px;top:calc(60px + env(safe-area-inset-top));padding:10px 12px;background:var(--sheet);border:1px solid var(--cherry);border-radius:4px;font-size:13px}
+#cross{position:absolute;left:50%;top:50%;width:44px;height:44px;margin:-22px 0 0 -22px;pointer-events:none}
+#sheet{position:relative;background:var(--sheet);display:flex;flex-direction:column;min-height:0;padding-bottom:env(safe-area-inset-bottom);border-top:1px solid var(--line)}
 #tabs{display:flex;gap:18px;padding:0 16px;overflow-x:auto;border-bottom:1px solid var(--line);flex:none;scrollbar-width:none}
 #tabs button{flex:none;min-height:46px;font-size:14px;color:var(--ink2);border-bottom:3px solid transparent;white-space:nowrap}
 #tabs button[aria-pressed=true]{color:var(--ink);font-weight:700;border-color:var(--cherry)}
-#body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
-#sum{padding:10px 16px 2px;font-size:13px;color:var(--ink2)}
+#body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:76px}
+#add{position:absolute;right:16px;bottom:calc(14px + env(safe-area-inset-bottom));min-height:48px;padding:0 20px;border-radius:24px;background:var(--cherry);color:#fff;font-weight:700;font-size:15px;box-shadow:0 2px 6px rgba(42,27,20,.3)}
+#sum{padding:10px 16px 2px;font-size:13px;color:var(--ink2);display:flex;justify-content:space-between;gap:12px;align-items:center}
+.link{font-size:13px;color:var(--ink);text-decoration:underline;text-underline-offset:3px;min-height:32px;white-space:nowrap}
+.sect{padding:16px 16px 2px;font:700 14px/1.4 var(--mincho)}
 .row{display:grid;grid-template-columns:8px 1fr auto;gap:12px;width:100%;text-align:left;padding:11px 16px;align-items:center;border-bottom:1px solid var(--line)}
-.row i{align-self:stretch;border-radius:4px}
-.row b{display:block;font:700 16px/1.35 var(--mincho)}
-.row small{display:block;font-size:12px;color:var(--ink2)}
+.row i{align-self:stretch;border-radius:4px;background:var(--line)}
+.row b{display:block;font:700 16px/1.35 var(--mincho);overflow-wrap:anywhere}
+.row small{display:block;font-size:12px;color:var(--ink2);overflow-wrap:anywhere}
 .row .r{text-align:right;font-size:13px;white-space:nowrap}
 .again{font-weight:700}
-#detail{padding:12px 16px 20px}
-#back{min-height:40px;font-size:14px;color:var(--ink2)}
-#detail h2{font:700 21px/1.35 var(--mincho);margin:2px 0 10px}
+.empty{padding:26px 16px;line-height:1.9}
+.empty b{display:block;font:700 18px/1.5 var(--mincho);margin-bottom:6px}
+#detail{padding:6px 16px 20px}
+.back{min-height:40px;font-size:14px;color:var(--ink2)}
+#detail h2{font:700 21px/1.35 var(--mincho);margin:2px 0 10px;overflow-wrap:anywhere}
 .two{display:grid;grid-template-columns:1fr 158px;gap:8px;align-items:start}
 dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:14px}
-dt{color:var(--ink2)}dd{margin:0}
+dt{color:var(--ink2)}dd{margin:0;overflow-wrap:anywhere}
 .roast{display:flex;gap:2px;margin:12px 0 4px}
 .roast span{flex:1;height:10px;border-radius:2px;opacity:.28}
 .roast span.on{opacity:1;outline:2px solid var(--cherry);outline-offset:1px}
-.memo{font-family:var(--mincho);margin:10px 0 0;line-height:1.8}
-#replay{margin-top:12px;min-height:44px;padding:0 16px;border-radius:22px;border:1px solid var(--ink);font-size:14px}
+.memo{font-family:var(--mincho);margin:10px 0 0;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere}
+.label{color:var(--ink2);font-size:13px;margin-top:12px}
+.thumb{display:block;width:100%;max-height:220px;object-fit:cover;border-radius:4px;margin-top:12px}
+.acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.btn{min-height:44px;padding:0 16px;border-radius:22px;border:1px solid var(--ink);font-size:14px}
+.btn.main{background:var(--ink);color:var(--sheet);border-color:var(--ink)}
+.hist{margin-top:14px;font-size:13px}
+.hist div{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-top:1px solid var(--line)}
+.legend{font-size:12px;color:var(--ink2);text-align:center;margin-top:-2px}
 svg text{font-family:var(--gothic);font-size:12px;fill:var(--ink)}
 .bean{width:24px;height:24px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}
 .mapboxgl-ctrl-logo,.mapboxgl-ctrl-attrib{opacity:.7}
+/* 入力画面 */
+.over{position:fixed;inset:0;background:var(--sheet);z-index:10;display:flex;flex-direction:column}
+.over header{display:flex;justify-content:space-between;align-items:center;padding:calc(8px + env(safe-area-inset-top)) 16px 8px;border-bottom:1px solid var(--line);flex:none}
+.over header h2{font:700 18px/1.4 var(--mincho);margin:0}
+.over header button{min-height:40px;padding:0 4px;font-size:14px}
+.scroll{flex:1;overflow-y:auto;padding:4px 16px 32px;max-width:560px;width:100%;margin:0 auto}
+.over footer{flex:none;padding:10px 16px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);max-width:560px;width:100%;margin:0 auto}
+.over footer .btn{width:100%}
+.field{margin-top:16px}
+.field>label,.field>.t{display:block;font-size:13px;color:var(--ink2);margin-bottom:5px}
+input[type=text],input[type=number],input[type=date],select,textarea{width:100%;min-height:44px;padding:8px 10px;font:16px/1.5 var(--gothic);color:var(--ink);background:#FBFBF3;border:1px solid var(--line);border-radius:4px}
+textarea{min-height:76px;resize:vertical}
+.half{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{min-height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--line);background:#FBFBF3;font-size:14px}
+.chip[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:var(--sheet)}
+.roastPick{display:grid;grid-template-columns:repeat(8,1fr);gap:3px}
+.roastPick button{height:44px;border-radius:3px}
+.roastPick button[aria-pressed=true]{outline:3px solid var(--cherry);outline-offset:1px}
+.help{font-size:12px;color:var(--ink2);margin-top:4px}
+.err{color:var(--cherry);font-size:14px;font-weight:700;margin-bottom:8px}
+#pickBar{position:absolute;inset:0;background:var(--sheet);padding:16px;display:flex;flex-direction:column;gap:10px;z-index:5}
+#pickBar b{font:700 17px/1.5 var(--mincho)}
+#tasteIn{display:block;width:100%;max-width:280px;margin:0 auto;touch-action:none}
+.photoPrev{display:block;width:120px;height:120px;object-fit:cover;border-radius:4px;margin-top:8px}
 @media (min-width:820px){
   #app{grid-template-rows:none;grid-template-columns:minmax(0,1fr) 400px}
   #sheet{border-top:0;border-left:1px solid var(--line)}
@@ -66,49 +106,45 @@ svg text{font-family:var(--gothic);font-size:12px;fill:var(--ink)}
   <div id="stage">
     <div id="map" role="img" aria-label="産地からお店への航路を描いた地球儀"></div>
     <div id="brand"><b>豆ミル</b></div>
+    <button id="moreBtn">バックアップ</button>
     <div id="notice" hidden></div>
     <button id="float" class="float" hidden></button>
+    <div id="cross" hidden><svg viewBox="0 0 44 44" width="44" height="44" aria-hidden="true"><circle cx="22" cy="22" r="9" fill="none" stroke="#F0F1E2" stroke-width="5"/><path d="M22 2v13M22 29v13M2 22h13M29 22h13" stroke="#F0F1E2" stroke-width="5"/><circle cx="22" cy="22" r="9" fill="none" stroke="#B3173F" stroke-width="2.5"/><path d="M22 2v13M22 29v13M2 22h13M29 22h13" stroke="#B3173F" stroke-width="2.5"/></svg></div>
   </div>
   <section id="sheet">
     <div id="tabs"></div>
     <div id="body"></div>
+    <button id="add">豆を記録する</button>
+    <div id="pickBar" hidden></div>
   </section>
 </div>
-<script src="https://api.mapbox.com/mapbox-gl-js/v3.9.0/mapbox-gl.js"></script>
+<div id="layer1"></div>
+<div id="layer2"></div>
 <script>
 const TOKEN='pk.eyJ1IjoiaG9yaWhha28iLCJhIjoiY211djd0ejljMDA5ZjMycHYxaTY3M3BsdSJ9.a1yefJYynC4k_YvllM5DVw';
 const C={paper:'#DCE0C4',sheet:'#F0F1E2',sea:'#1E4A55',land:'#CDB78F',land2:'#C2AA7F',road:'#E8DCC0',ink:'#2A1B14',cherry:'#D3214F'};
 const ROAST=['ライト','シナモン','ミディアム','ハイ','シティ','フルシティ','フレンチ','イタリアン'];
 const ROAST_C=['#C9A26B','#B5874F','#9C6B3A','#82532B','#6B4022','#54301A','#3F2314','#2A170D'];
 const AXES=['香り','酸味','甘み','コク','苦味'];
-const SHOPS={
-  oka:{name:'丘の焙煎所（仮）',p:[139.380,35.615]},
-  eki:{name:'駅前の豆屋（仮）',p:[139.339,35.656]},
-  kyo:{name:'京都の通販店（仮）',p:[135.768,35.011]}
-};
-const ORIGINS={
-  yirga:{country:'エチオピア',name:'イルガチェフェ',p:[38.2,6.16]},
-  guji:{country:'エチオピア',name:'グジ',p:[38.9,5.6]},
-  nyeri:{country:'ケニア',name:'ニエリ',p:[36.95,-0.42]},
-  huila:{country:'コロンビア',name:'ウイラ',p:[-75.6,2.5]},
-  antigua:{country:'グアテマラ',name:'アンティグア',p:[-90.73,14.56]},
-  cerrado:{country:'ブラジル',name:'セラード',p:[-46.9,-18.9]},
-  sumatra:{country:'インドネシア',name:'スマトラ',p:[98.7,2.4]},
-  boquete:{country:'パナマ',name:'ボケテ',p:[-82.43,8.78]}
-};
-const BEANS=[
- {id:'b1',name:'イルガチェフェ G1',o:'yirga',s:'oka',proc:'ウォッシュド',roast:2,price:1620,g:200,date:'2026-10-24',again:2,taste:[5,4,4,2,1],memo:'紅茶みたいに軽い。次はもう少し粗く挽いてみる。'},
- {id:'b2',name:'マンデリン トバコ',o:'sumatra',s:'eki',proc:'スマトラ式',roast:5,price:1380,g:200,date:'2026-10-05',again:1,taste:[3,1,2,5,4],memo:'どっしり。朝より夜向き。'},
- {id:'b3',name:'グジ ナチュラル',o:'guji',s:'kyo',proc:'ナチュラル',roast:3,price:1980,g:150,date:'2026-09-18',again:2,taste:[5,3,5,3,1],memo:'ベリーの香りが強くて驚いた。'},
- {id:'b4',name:'ウイラ エル・パライソ',o:'huila',s:'oka',proc:'ウォッシュド',roast:4,price:1450,g:200,date:'2026-09-02',again:2,taste:[4,3,4,3,2],memo:'何にでも合う。迷ったらこれ。'},
- {id:'b5',name:'サントス セラード',o:'cerrado',s:'eki',proc:'ナチュラル',roast:4,price:1080,g:200,date:'2026-08-11',again:1,taste:[3,2,3,3,3],memo:'安くて毎日飲める。'},
- {id:'b6',name:'ニエリ AA',o:'nyeri',s:'oka',proc:'ウォッシュド',roast:3,price:1780,g:200,date:'2026-07-20',again:0,taste:[4,5,3,3,2],memo:'酸が自分には強すぎた。'},
- {id:'b7',name:'アンティグア',o:'antigua',s:'eki',proc:'ウォッシュド',roast:5,price:1320,g:200,date:'2026-06-28',again:1,taste:[3,2,3,4,3],memo:'チョコのような後味。'},
- {id:'b8',name:'ボケテ ゲイシャ',o:'boquete',s:'kyo',proc:'ウォッシュド',roast:1,price:3200,g:100,date:'2026-05-30',again:2,taste:[5,4,5,2,1],memo:'特別な日用。花の香り。'},
- {id:'b9',name:'イルガチェフェ コンガ',o:'yirga',s:'oka',proc:'ナチュラル',roast:2,price:1680,g:200,date:'2026-04-12',again:2,taste:[5,3,4,3,1],memo:'去年の秋にも買った豆。やっぱり好き。'}
-].sort((a,b)=>b.date.localeCompare(a.date));
 const AGAIN=['もう買わない','どちらでも','また買う'];
-
+const PROC=['ウォッシュド','ナチュラル','ハニー','スマトラ式'];
+const GRAMS=[100,150,200,300,500];
+/* 産地の表。[国, [産地名, 経度, 緯度]...] 最初の地点が国の代表 */
+const ORIGIN_TABLE=[
+['エチオピア',['イルガチェフェ',38.2,6.16],['グジ',38.9,5.6],['シダモ',38.5,6.7],['ハラー',42.1,9.3],['ジンマ',36.8,7.7]],
+['ケニア',['ニエリ',36.95,-.42],['キリニャガ',37.3,-.5],['キアンブ',36.8,-1.1]],
+['タンザニア',['キリマンジャロ',37.35,-3.2],['ムベヤ',33.45,-8.9]],
+['ルワンダ',['ルワンダ',29.7,-2]],['ブルンジ',['カヤンザ',29.6,-2.9]],['ウガンダ',['エルゴン山',34.4,1.2]],['イエメン',['モカ・ハラズ',43.9,15.3]],
+['コロンビア',['ウイラ',-75.6,2.5],['ナリーニョ',-77.3,1.3],['トリマ',-75.5,3.9],['カウカ',-76.6,2.4],['アンティオキア',-75.6,6.2]],
+['ブラジル',['セラード',-46.9,-18.9],['南ミナス',-45.4,-21.5],['モジアナ',-47.4,-20.7],['バイーア',-41.5,-13.5]],
+['グアテマラ',['アンティグア',-90.73,14.56],['ウエウエテナンゴ',-91.47,15.32],['アティトラン',-91.2,14.7]],
+['コスタリカ',['タラス',-84,9.65],['ウエストバレー',-84.4,10.1]],['パナマ',['ボケテ',-82.43,8.78]],
+['エルサルバドル',['サンタアナ',-89.6,13.9]],['ホンジュラス',['サンタバルバラ',-88.3,14.9]],['ニカラグア',['ヒノテガ',-86,13.1]],
+['メキシコ',['チアパス',-92.6,16.8]],['ペルー',['チャンチャマイヨ',-75.3,-11],['カハマルカ',-78.5,-7.1]],['ボリビア',['カラナビ',-67.5,-15.8]],
+['ジャマイカ',['ブルーマウンテン',-76.6,18.05]],['アメリカ（ハワイ）',['コナ',-155.9,19.5]],['ドミニカ共和国',['バラオナ',-71.2,18.1]],['キューバ',['シエラマエストラ',-75.8,20.1]],
+['インドネシア',['スマトラ',98.7,2.4],['アチェ・ガヨ',96.85,4.6],['トラジャ',119.9,-3],['バリ',115.2,-8.3],['ジャワ',113.8,-7.9]],
+['東ティモール',['エルメラ',125.4,-8.8]],['パプアニューギニア',['ゴロカ',145.4,-6.1]],['ベトナム',['ダラット',108.4,11.9]],['ラオス',['ボラベン高原',106.4,15.2]],['タイ',['チェンライ',99.8,19.9]],['ミャンマー',['シャン州',96.5,20.8]],['インド',['マイソール',75.7,12.4]],['中国',['雲南',100.5,22.8]]
+];
 /* 大圏コース（SoraMiruと同じ計算） */
 const D2R=Math.PI/180,RE=6371;
 function gcKm(a,b){const dLat=(b[1]-a[1])*D2R,dLon=(b[0]-a[0])*D2R;const h=Math.sin(dLat/2)**2+Math.cos(a[1]*D2R)*Math.cos(b[1]*D2R)*Math.sin(dLon/2)**2;return 2*RE*Math.asin(Math.sqrt(h));}
@@ -117,69 +153,141 @@ function destPt(p,az,km){const d=km/RE,b=az*D2R,la=p[1]*D2R,lo=p[0]*D2R;const la
 function gcLine(a,b){const pts=[],d=gcKm(a,b),az=gcBrg(a,b),n=Math.max(2,Math.ceil(d/100));let prev=null;for(let i=0;i<=n;i++){const p=destPt(a,az,d*i/n);if(prev){while(p[0]-prev[0]>180)p[0]-=360;while(p[0]-prev[0]<-180)p[0]+=360;}pts.push(p);prev=p;}pts[pts.length-1]=[b[0]+Math.round((pts[pts.length-1][0]-b[0])/360)*360,b[1]];return pts;}
 
 const $=id=>document.getElementById(id);
-const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const yen=n=>'¥'+n.toLocaleString('ja-JP');
-const per100=b=>Math.round(b.price/b.g*100);
-const jd=d=>{const[y,m,dd]=d.split('-');return `${+y}年${+m}月${+dd}日`;};
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const yen=n=>'¥'+Number(n).toLocaleString('ja-JP');
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const jd=d=>{if(!d)return '';const[y,m,dd]=d.split('-');return `${+y}年${+m}月${+dd}日`;};
+const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
 const calm=matchMedia('(prefers-reduced-motion: reduce)').matches;
-const lineOf=b=>gcLine(ORIGINS[b.o].p,SHOPS[b.s].p);
 const fc=f=>({type:'FeatureCollection',features:f});
 const lineF=(c,props={})=>({type:'Feature',properties:props,geometry:{type:'LineString',coordinates:c}});
 const ptF=(p,props={})=>({type:'Feature',properties:props,geometry:{type:'Point',coordinates:p}});
+const HOME=[80,15],JAPAN=[139.4,35.65];
 
-const HOME=[80,15];
-const state={shop:null,bean:null,close:false};
+/* ---------- 保存（端末の中のデータベース。同じアドレスのほかのアプリとは別の入れ物） ---------- */
+let idb=null;
+const D={shops:[],beans:[],buys:[]};
+function openDB(){return new Promise((ok,no)=>{const r=indexedDB.open('mamemiru',1);r.onupgradeneeded=()=>{for(const n of ['shops','beans','buys','photos'])r.result.createObjectStore(n,{keyPath:'id'});};r.onsuccess=()=>ok(idb=r.result);r.onerror=()=>no(r.error);});}
+function tx(s,mode,fn){return new Promise((ok,no)=>{const t=idb.transaction(s,mode),st=t.objectStore(s);let out;const q=fn(st);if(q)q.onsuccess=()=>out=q.result;t.oncomplete=()=>ok(out);t.onerror=t.onabort=()=>no(t.error);});}
+const dbAll=s=>tx(s,'readonly',st=>st.getAll());
+const dbGet=(s,id)=>tx(s,'readonly',st=>st.get(id));
+const dbPut=(s,o)=>tx(s,'readwrite',st=>st.put(o));
+const dbDel=(s,id)=>tx(s,'readwrite',st=>st.delete(id));
+async function dbLoad(){for(const n of ['shops','beans','buys'])D[n]=await dbAll(n);}
+async function save(store,o){
+  const i=D[store].findIndex(x=>x.id===o.id);i<0?D[store].push(o):D[store][i]=o;
+  await dbPut(store,o);
+  if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
+}
+async function remove(store,id){D[store]=D[store].filter(x=>x.id!==id);await dbDel(store,id);}
+const shopOf=id=>D.shops.find(s=>s.id===id);
+const beanOf=id=>D.beans.find(b=>b.id===id);
+const buyOf=id=>D.buys.find(b=>b.id===id);
+const byDate=(a,b)=>(b.date||'').localeCompare(a.date||'')||(b.at||0)-(a.at||0);
+const bought=()=>D.buys.filter(b=>b.bought).sort(byDate);
+const per100=b=>b.price&&b.grams?Math.round(b.price/b.grams*100):null;
+const originText=o=>o?[o.country,o.region].filter(Boolean).join(' '):'';
+function ends(b){const be=beanOf(b.bean),s=shopOf(b.shop);if(!be||!be.origin||!be.origin.p||!s||!s.p)return null;return [be.origin.p,s.p];}
+const lineOf=b=>{const e=ends(b);return e?gcLine(e[0],e[1]):null;};
+function kv(k,v){try{if(v===undefined)return localStorage.getItem('mamemiru_'+k);localStorage.setItem('mamemiru_'+k,v);}catch(e){return null;}}
+
+const state={shop:null,buy:null,close:false,picking:false};
 let map=null,ready=false,run=0,follow=true,flyer=null;
 
-/* ---------- 下の一覧 ---------- */
+/* ---------- 下の画面 ---------- */
 function drawTabs(){
-  const all=[[null,'すべて'],...Object.entries(SHOPS).map(([k,v])=>[k,v.name])];
-  $('tabs').innerHTML=all.map(([k,n])=>`<button data-k="${k||''}" aria-pressed="${(state.shop||'')===(k||'')}">${esc(n)}</button>`).join('');
-  $('tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>pickShop(b.dataset.k||null));
+  const shops=[...D.shops].sort((a,b)=>a.at-b.at);
+  $('tabs').innerHTML=[`<button data-k="" aria-pressed="${!state.shop}">すべて</button>`,...shops.map(s=>`<button data-k="${s.id}" aria-pressed="${state.shop===s.id}">${esc(s.name)}</button>`),'<button data-new="1">お店を追加</button>'].join('');
+  $('tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{if(b.dataset.new){openShop(null,s=>pickShop(s.id));}else pickShop(b.dataset.k||null);});
+}
+function againText(v){return v==null?'':AGAIN[v];}
+function backupNudge(){
+  if(!D.buys.length)return '';
+  const last=+kv('lastBackup')||0;
+  return Date.now()-last>30*864e5?'<button class="link" data-more="1">バックアップしましょう</button>':'';
 }
 function drawList(){
-  const list=BEANS.filter(b=>!state.shop||b.s===state.shop);
-  const n=new Set(list.map(b=>ORIGINS[b.o].country)).size;
-  $('body').innerHTML=`<div id="sum">${state.shop?'この店で買った豆':'これまでの豆'}　${list.length}袋、${n}か国（試作用の架空の記録です）</div>`+list.map(b=>`
-    <button class="row" data-id="${b.id}">
-      <i style="background:${ROAST_C[b.roast]}"></i>
-      <span><b>${esc(b.name)}</b><small>${esc(ORIGINS[b.o].country)}　${jd(b.date)}${state.shop?'':'　'+esc(SHOPS[b.s].name)}</small></span>
-      <span class="r"><span class="${b.again===2?'again':''}">${AGAIN[b.again]}</span><br>100g ${yen(per100(b))}</span>
-    </button>`).join('');
+  state.buy=null;$('add').hidden=false;
+  state.shop?drawFront():drawAll();
   $('body').scrollTop=0;
-  $('body').querySelectorAll('.row').forEach(r=>r.onclick=()=>pickBean(r.dataset.id));
+  $('body').querySelectorAll('[data-more]').forEach(b=>b.onclick=openMore);
 }
-function radar(t){
+function drawAll(){
+  const list=bought();
+  if(!list.length){
+    $('body').innerHTML=`<div class="empty"><b>最初の一袋を記録しましょう</b>買った豆を記録すると、産地からお店まで航路が引かれ、豆が飛んでいきます。</div>`;
+    return;
+  }
+  const n=new Set(list.map(b=>(beanOf(b.bean)?.origin||{}).country).filter(Boolean)).size;
+  $('body').innerHTML=`<div id="sum"><span>これまでの豆　${list.length}袋${n?`、${n}か国`:''}</span>${backupNudge()}</div>`+list.map(b=>{
+    const be=beanOf(b.bean)||{},s=shopOf(b.shop),p=per100(b);
+    return `<button class="row" data-id="${b.id}"><i ${be.roast!=null?`style="background:${ROAST_C[be.roast]}"`:''}></i>
+    <span><b>${esc(be.name)}</b><small>${esc((be.origin||{}).country||'')}${be.origin?'　':''}${jd(b.date)}　${esc(s?s.name:'')}</small></span>
+    <span class="r"><span class="${b.again===2?'again':''}">${againText(b.again)}</span>${p?`<br>100g ${yen(p)}`:''}</span></button>`;
+  }).join('');
+  $('body').querySelectorAll('.row').forEach(r=>r.onclick=()=>pickBuy(r.dataset.id,true));
+}
+function drawFront(){
+  const shop=shopOf(state.shop);
+  const here=D.buys.filter(b=>b.shop===state.shop).sort(byDate);
+  const groups={};here.filter(b=>b.bought).forEach(b=>(groups[b.bean]=groups[b.bean]||[]).push(b));
+  const rows=Object.values(groups).map(g=>{
+    const l=g[0],prev=g[1],be=beanOf(l.bean)||{},p=per100(l),pp=prev?per100(prev):null,diff=p&&pp?p-pp:0;
+    const note=g.find(b=>b.memo)?.memo||'';
+    return `<button class="row" data-id="${l.id}"><i ${be.roast!=null?`style="background:${ROAST_C[be.roast]}"`:''}></i>
+    <span><b>${esc(be.name)}</b><small>前回 ${jd(l.date)}　${g.length}回目</small>${note?`<small>${esc(note.length>34?note.slice(0,34)+'…':note)}</small>`:''}</span>
+    <span class="r"><span class="${l.again===2?'again':''}">${againText(l.again)}</span>${p?`<br>100g ${yen(p)}`:''}${diff?`<br><small>前回より${diff>0?'+':'−'}${yen(Math.abs(diff))}</small>`:''}</span></button>`;
+  });
+  const wish=here.filter(b=>!b.bought).map(b=>{const be=beanOf(b.bean)||{},p=per100(b);
+    return `<button class="row" data-id="${b.id}"><i ${be.roast!=null?`style="background:${ROAST_C[be.roast]}"`:''}></i><span><b>${esc(be.name)}</b><small>${jd(b.date)}に見かけた</small></span><span class="r">${p?`100g ${yen(p)}`:''}</span></button>`;});
+  const count=Object.keys(groups).length;
+  $('body').innerHTML=`<div id="sum"><span>${count?`この店で買った豆　${count}種類`:'この店の記録はまだありません'}</span><button class="link" id="shopEdit">お店を編集</button></div>${rows.join('')}${wish.length?`<div class="sect">気になる豆</div>${wish.join('')}`:''}`;
+  $('shopEdit').onclick=()=>openShop(shop,()=>{renderAll();});
+  $('body').querySelectorAll('.row').forEach(r=>r.onclick=()=>pickBuy(r.dataset.id,false));
+}
+function radar(mine,theirs){
   const cx=79,cy=78,R=50,pt=(i,v)=>{const a=-Math.PI/2+i*2*Math.PI/5,r=R*v/5;return [cx+r*Math.cos(a),cy+r*Math.sin(a)];};
   const poly=f=>AXES.map((_,i)=>pt(i,f(i)).map(x=>x.toFixed(1)).join(',')).join(' ');
-  let s=`<svg viewBox="0 0 158 152" width="158" height="152" role="img" aria-label="味のチャート ${AXES.map((a,i)=>a+t[i]).join('、')}">`;
+  const main=mine||theirs;
+  const label=[mine?'自分 '+AXES.map((a,i)=>a+mine[i]).join('、'):'',theirs?'お店 '+AXES.map((a,i)=>a+theirs[i]).join('、'):''].filter(Boolean).join('／');
+  let s=`<svg viewBox="0 0 158 152" width="158" height="152" role="img" aria-label="味のチャート ${esc(label)}">`;
   [1,2,3,4,5].forEach(v=>s+=`<polygon points="${poly(()=>v)}" fill="none" stroke="#C4C8A8" stroke-width="${v===5?1:.75}"/>`);
-  s+=`<polygon points="${poly(i=>t[i])}" fill="#B3173F" fill-opacity=".16" stroke="#B3173F" stroke-width="2" stroke-linejoin="round"/>`;
-  t.forEach((v,i)=>{const[x,y]=pt(i,v);s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="#B3173F" stroke="#F0F1E2" stroke-width="2"><title>${AXES[i]} ${v}</title></circle>`;});
-  AXES.forEach((a,i)=>{const[x,y]=pt(i,6.35);const anc=Math.abs(x-cx)<4?'middle':x>cx?'end':'start';const px=anc==='end'?Math.min(x+12,157):anc==='start'?Math.max(x-12,1):x;s+=`<text x="${px.toFixed(1)}" y="${(y+4).toFixed(1)}" text-anchor="${anc}">${a} ${t[i]}</text>`;});
-  return s+'</svg>';
+  if(mine&&theirs)s+=`<polygon points="${poly(i=>theirs[i])}" fill="none" stroke="#2A1B14" stroke-width="2" stroke-dasharray="4 3" stroke-linejoin="round"/>`;
+  const col=mine?'#B3173F':'#2A1B14';
+  s+=`<polygon points="${poly(i=>main[i])}" fill="${col}" fill-opacity=".16" stroke="${col}" stroke-width="2" stroke-linejoin="round" ${!mine?'stroke-dasharray="4 3"':''}/>`;
+  main.forEach((v,i)=>{const[x,y]=pt(i,v);s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="${col}" stroke="#F0F1E2" stroke-width="2"><title>${AXES[i]} ${v}</title></circle>`;});
+  AXES.forEach((a,i)=>{const[x,y]=pt(i,6.35);const anc=Math.abs(x-cx)<4?'middle':x>cx?'end':'start';const px=anc==='end'?Math.min(x+12,157):anc==='start'?Math.max(x-12,1):x;s+=`<text x="${px.toFixed(1)}" y="${(y+4).toFixed(1)}" text-anchor="${anc}">${a}${mine?' '+main[i]:''}</text>`;});
+  s+='</svg>';
+  const leg=mine&&theirs?'<div class="legend">実線 自分　点線 お店</div>':!mine?'<div class="legend">点線 お店の説明</div>':'';
+  return s+leg;
 }
-function drawDetail(b){
-  const o=ORIGINS[b.o];
+async function drawDetail(b){
+  const be=beanOf(b.bean)||{},s=shopOf(b.shop),o=be.origin;
+  $('add').hidden=true;
+  const rows=[['産地',originText(o)],['精製',be.proc],['お店',s&&s.name],[b.bought?'買った日':'見かけた日',jd(b.date)],['値段',b.price?`${yen(b.price)}${b.grams?`（${b.grams}g）`:''}`:''],['焙煎日',jd(b.roastDate)],['次回',againText(b.again)]].filter(r=>r[1]);
+  const others=D.buys.filter(x=>x.bean===b.bean&&x.bought).sort(byDate);
+  const hasChart=b.taste||b.shopTaste;
   $('body').innerHTML=`<div id="detail">
-    <button id="back">一覧に戻す</button>
-    <h2>${esc(b.name)}</h2>
-    <div class="two"><dl>
-      <dt>産地</dt><dd>${esc(o.country)} ${esc(o.name)}</dd>
-      <dt>精製</dt><dd>${esc(b.proc)}</dd>
-      <dt>お店</dt><dd>${esc(SHOPS[b.s].name)}</dd>
-      <dt>買った日</dt><dd>${jd(b.date)}</dd>
-      <dt>値段</dt><dd>${yen(b.price)}（${b.g}g）</dd>
-      <dt>次回</dt><dd class="${b.again===2?'again':''}">${AGAIN[b.again]}</dd>
-    </dl>${radar(b.taste)}</div>
-    <div class="roast" aria-hidden="true">${ROAST_C.map((c,i)=>`<span class="${i===b.roast?'on':''}" style="background:${c}"></span>`).join('')}</div>
-    <small>焙煎度 ${ROAST[b.roast]}</small>
-    <p class="memo">${esc(b.memo)}</p>
-    <button id="replay">もう一度飛ばす</button>
+    <button class="back" id="back">一覧に戻す</button>
+    <h2>${esc(be.name)}</h2>
+    <div class="${hasChart?'two':''}"><dl>${rows.map(r=>`<dt>${r[0]}</dt><dd class="${r[0]==='次回'&&b.again===2?'again':''}">${esc(r[1])}</dd>`).join('')}</dl>${hasChart?`<div>${radar(b.taste,b.shopTaste)}</div>`:''}</div>
+    ${be.roast!=null?`<div class="roast" aria-hidden="true">${ROAST_C.map((c,i)=>`<span class="${i===be.roast?'on':''}" style="background:${c}"></span>`).join('')}</div><small>焙煎度 ${ROAST[be.roast]}</small>`:''}
+    ${b.memo?`<p class="memo">${esc(b.memo)}</p>`:''}
+    ${b.shopMemo?`<div class="label">お店の説明</div><p class="memo" style="margin-top:2px">${esc(b.shopMemo)}</p>`:''}
+    <div id="ph"></div>
+    <div class="acts">
+      <button class="btn main" id="edit">${b.bought&&b.again==null?'味と感想を書く':'編集する'}</button>
+      <button class="btn" id="rebuy">${b.bought?'また買った':'買った'}</button>
+      ${b.bought&&lineOf(b)?'<button class="btn" id="fly">飛ばす</button>':''}
+    </div>
+    ${others.length>1?`<div class="hist"><div class="label" style="border:0;padding:0;margin-bottom:4px">この豆の記録</div>${others.map(x=>`<div><span>${jd(x.date)}　${esc((shopOf(x.shop)||{}).name||'')}</span><span>${x.price?yen(x.price):''}</span></div>`).join('')}</div>`:''}
   </div>`;
   $('body').scrollTop=0;
-  $('back').onclick=()=>{state.bean=null;drawList();refocus();};
-  $('replay').onclick=()=>flight(b);
+  $('back').onclick=()=>{drawList();refocus();};
+  $('edit').onclick=()=>openForm({buy:b});
+  $('rebuy').onclick=()=>openForm(b.bought?{from:b}:{promote:b});
+  if($('fly'))$('fly').onclick=()=>flight(b);
+  if(b.photo){const ph=await dbGet('photos',b.photo).catch(()=>null);if(ph&&state.buy===b.id&&$('ph'))$('ph').innerHTML=`<img class="thumb" alt="袋の写真" src="${ph.data}">`;}
 }
 
 /* ---------- 地球儀 ---------- */
@@ -203,30 +311,6 @@ function tint(){
       try{const tf=map.getLayoutProperty(id,'text-field');if(JSON.stringify(tf||'').includes('name'))map.setLayoutProperty(id,'text-field',['coalesce',['get','name_ja'],['get','name']]);}catch(e){}
     }
   }
-}
-function routeFeatures(){
-  const pair={};
-  BEANS.forEach(b=>{const k=b.o+'>'+b.s;(pair[k]=pair[k]||{b,n:0}).n++;});
-  return Object.values(pair).map(({b,n})=>lineF(lineOf(b),{n,shop:b.s}));
-}
-function addLayers(){
-  map.setFog({range:[2,12],color:C.paper,'high-color':C.paper,'space-color':C.paper,'horizon-blend':.012,'star-intensity':0});
-  tint();
-  map.addSource('sat',{type:'raster',url:'mapbox://mapbox.satellite',tileSize:256});
-  map.addLayer({id:'sat',type:'raster',source:'sat',minzoom:4,layout:{visibility:'none'},paint:{'raster-opacity':0,'raster-fade-duration':0}});
-  map.addSource('routes',{type:'geojson',data:fc([])});
-  map.addLayer({id:'routes',type:'line',source:'routes',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':C.cherry,'line-width':['interpolate',['linear'],['get','n'],1,1.4,3,3],'line-opacity':.8}});
-  map.addSource('hl',{type:'geojson',data:fc([])});
-  map.addLayer({id:'hl-case',type:'line',source:'hl',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':C.sheet,'line-width':5.5,'line-opacity':.9}});
-  map.addLayer({id:'hl',type:'line',source:'hl',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':C.cherry,'line-width':3}});
-  const byO={};BEANS.forEach(b=>byO[b.o]=(byO[b.o]||0)+1);
-  map.addSource('origins',{type:'geojson',data:fc(Object.entries(byO).map(([k,n])=>ptF(ORIGINS[k].p,{k,n,name:ORIGINS[k].name})))});
-  map.addLayer({id:'origins',type:'circle',source:'origins',paint:{'circle-color':C.cherry,'circle-stroke-color':C.sheet,'circle-stroke-width':1.5,'circle-radius':['interpolate',['linear'],['get','n'],1,5,4,11]}});
-  map.addLayer({id:'origin-name',type:'symbol',source:'origins',layout:{'text-field':['get','name'],'text-size':12,'text-offset':[0,.95],'text-anchor':'top'},paint:{'text-color':C.ink,'text-halo-color':C.sheet,'text-halo-width':1.6}});
-  map.addSource('shops',{type:'geojson',data:fc(Object.entries(SHOPS).map(([k,v])=>ptF(v.p,{k,name:v.name.replace('（仮）','')})))});
-  map.addLayer({id:'shops',type:'circle',source:'shops',paint:{'circle-color':C.ink,'circle-stroke-color':C.sheet,'circle-stroke-width':2,'circle-radius':6}});
-  map.addLayer({id:'shop-name',type:'symbol',source:'shops',minzoom:3.5,layout:{'text-field':['get','name'],'text-size':13,'text-offset':[0,1],'text-anchor':'top'},paint:{'text-color':C.ink,'text-halo-color':C.sheet,'text-halo-width':1.8}});
-  ready=true;
 }
 const hl=fs=>map.getSource('hl').setData(fc(fs));
 function opening(){
@@ -283,12 +367,13 @@ function bean(){
 }
 async function flight(b){
   if(!ready)return;
-  const my=++run,c=lineOf(b),origin=ORIGINS[b.o].p,shop=SHOPS[b.s].p,plan=cameraPlan(c);
+  const c=lineOf(b);if(!c)return;
+  const my=++run,[origin,shop]=ends(b),plan=cameraPlan(c);
   state.close=false;
   map.setPaintProperty('routes','line-opacity',.28);
   hl([]);showFloat(null);
   const m=bean().setLngLat(origin).addTo(map);
-  if(calm){hl([lineF(c)]);m.setLngLat(shop);map.jumpTo({center:shop,zoom:plan.zg+.35,pitch:0,bearing:0});showFloat(b.s);return;}
+  if(calm){hl([lineF(c)]);m.setLngLat(shop);map.jumpTo({center:shop,zoom:plan.zg+.35,pitch:0,bearing:0});showFloat(b.shop);return;}
   follow=true;
   const near=z=>smooth(plan.zg+2.5,plan.zg+7,z),satAt=z=>smooth(plan.zg+2.6,plan.zg+6,z);
   /* 店などに寄っているときは、まず地球まで引く */
@@ -336,7 +421,7 @@ async function flight(b){
   if(my!==run)return;
   hl([lineF(c)]);m.setLngLat(c[lastI]);
   state.close=follow;
-  showFloat(b.s);
+  showFloat(b.shop);
 }
 function clearFlight(){run++;satOn(false);if(flyer)flyer.remove();}
 function showFloat(shopId){
@@ -346,54 +431,355 @@ function showFloat(shopId){
   f.textContent=state.close?'地球に戻す':'このお店まで寄る';
   f.onclick=()=>{
     state.close=!state.close;
-    const s=SHOPS[shopId];
+    const s=shopOf(shopId);if(!s||!s.p)return;
     map.flyTo(state.close?{center:s.p,zoom:CAM.shopZoom,pitch:CAM.pitch,bearing:CAM.turn,duration:3400,easing:easeIn,essential:true}:{center:s.p,zoom:globeZoom()+.35,pitch:0,bearing:0,duration:3000,easing:easeOut,essential:true});
     showFloat(shopId);
   };
 }
+function routeFeatures(){
+  const pair={};
+  bought().forEach(b=>{const e=ends(b);if(!e)return;const k=e[0].join()+'>'+b.shop;(pair[k]=pair[k]||{b,n:0}).n++;});
+  return Object.values(pair).map(({b,n})=>lineF(lineOf(b),{n,shop:b.shop}));
+}
+function originFeatures(){
+  const m={};
+  bought().forEach(b=>{const be=beanOf(b.bean);if(!be||!be.origin||!be.origin.p)return;const k=be.origin.p.map(x=>x.toFixed(2)).join();(m[k]=m[k]||{p:be.origin.p,n:0,name:be.origin.region||be.origin.country,id:b.id}).n++;});
+  return Object.values(m).map(v=>ptF(v.p,{n:v.n,name:v.name,id:v.id}));
+}
+const shopFeatures=()=>D.shops.filter(s=>s.p).map(s=>ptF(s.p,{k:s.id,name:s.name}));
+function mapSync(){
+  if(!ready)return;
+  map.getSource('routes').setData(fc(routeFeatures()));
+  map.getSource('origins').setData(fc(originFeatures()));
+  map.getSource('shops').setData(fc(shopFeatures()));
+}
+function addLayers(){
+  map.setFog({range:[2,12],color:C.paper,'high-color':C.paper,'space-color':C.paper,'horizon-blend':.012,'star-intensity':0});
+  tint();
+  map.addSource('sat',{type:'raster',url:'mapbox://mapbox.satellite',tileSize:256});
+  map.addLayer({id:'sat',type:'raster',source:'sat',minzoom:4,layout:{visibility:'none'},paint:{'raster-opacity':0,'raster-fade-duration':0}});
+  map.addSource('routes',{type:'geojson',data:fc([])});
+  map.addLayer({id:'routes',type:'line',source:'routes',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':C.cherry,'line-width':['interpolate',['linear'],['get','n'],1,1.4,3,3],'line-opacity':.8}});
+  map.addSource('hl',{type:'geojson',data:fc([])});
+  map.addLayer({id:'hl-case',type:'line',source:'hl',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':C.sheet,'line-width':5.5,'line-opacity':.9}});
+  map.addLayer({id:'hl',type:'line',source:'hl',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':C.cherry,'line-width':3}});
+  map.addSource('origins',{type:'geojson',data:fc([])});
+  map.addLayer({id:'origins',type:'circle',source:'origins',paint:{'circle-color':C.cherry,'circle-stroke-color':C.sheet,'circle-stroke-width':1.5,'circle-radius':['interpolate',['linear'],['get','n'],1,5,4,11]}});
+  map.addLayer({id:'origin-name',type:'symbol',source:'origins',layout:{'text-field':['get','name'],'text-size':12,'text-offset':[0,.95],'text-anchor':'top'},paint:{'text-color':C.ink,'text-halo-color':C.sheet,'text-halo-width':1.6}});
+  map.addSource('shops',{type:'geojson',data:fc([])});
+  map.addLayer({id:'shops',type:'circle',source:'shops',paint:{'circle-color':C.ink,'circle-stroke-color':C.sheet,'circle-stroke-width':2,'circle-radius':6}});
+  map.addLayer({id:'shop-name',type:'symbol',source:'shops',minzoom:3.5,layout:{'text-field':['get','name'],'text-size':13,'text-offset':[0,1],'text-anchor':'top'},paint:{'text-color':C.ink,'text-halo-color':C.sheet,'text-halo-width':1.8}});
+  ready=true;$('notice').hidden=true;
+  mapSync();
+}
 function refocus(){
   clearFlight();state.close=false;
   if(!ready)return;
-  map.getSource('routes').setData(fc(routeFeatures()));
-  if(state.shop){
-    const s=SHOPS[state.shop];
+  mapSync();
+  const s=state.shop&&shopOf(state.shop);
+  if(s){
     map.setPaintProperty('routes','line-opacity',.22);
     hl(routeFeatures().filter(f=>f.properties.shop===state.shop));
-    map.flyTo({center:s.p,zoom:globeZoom()+.2,pitch:0,bearing:0,duration:1500,essential:!calm});
-    showFloat(state.shop);
+    if(s.p){map.flyTo({center:s.p,zoom:globeZoom()+.2,pitch:0,bearing:0,duration:1500,essential:!calm});showFloat(s.id);}else showFloat(null);
   }else{
     map.setPaintProperty('routes','line-opacity',.8);
     hl([]);showFloat(null);
     map.flyTo({center:HOME,zoom:globeZoom(),pitch:0,bearing:0,duration:1500,essential:!calm});
   }
 }
-function pickShop(k){state.shop=k;state.bean=null;drawTabs();drawList();refocus();}
-function pickBean(id){const b=BEANS.find(x=>x.id===id);state.bean=id;state.close=false;drawDetail(b);flight(b);}
+function pickShop(k){state.shop=k;state.buy=null;drawTabs();drawList();refocus();}
+function pickBuy(id,fly){
+  const b=buyOf(id);if(!b)return;
+  state.buy=id;state.close=false;drawDetail(b);
+  if(fly&&b.bought)return flight(b);
+  clearFlight();
+  const c=lineOf(b);
+  if(ready&&c){map.setPaintProperty('routes','line-opacity',.28);hl([lineF(c)]);}
+}
+function renderAll(){drawTabs();const b=state.buy&&buyOf(state.buy);b?drawDetail(b):drawList();mapSync();}
 function fail(msg){const n=$('notice');n.textContent=msg;n.hidden=false;}
 
-drawTabs();drawList();
-if(typeof mapboxgl==='undefined'){
-  fail('地球儀の表示には通信が必要です。通信できる場所で開き直してください。一覧はこのまま使えます。');
-}else{
+/* ---------- 地図で場所を指定 ---------- */
+function pick({title,center,zoom,sat,geo}){
+  return new Promise(res=>{
+    if(!ready)return res(undefined);
+    clearFlight();state.picking=true;follow=false;
+    $('layer1').hidden=$('layer2').hidden=true;
+    $('cross').hidden=false;$('float').hidden=true;
+    if(sat){satOn(true);map.setPaintProperty('sat','raster-opacity',1);}
+    map.flyTo({center,zoom,pitch:0,bearing:0,duration:1200,essential:true});
+    const bar=$('pickBar');bar.hidden=false;
+    bar.innerHTML=`<b>${esc(title)}</b><div>地図を動かして、十字を場所に合わせてください。二本指で拡大できます。</div>
+      <div class="acts" style="margin-top:0">${geo?'<button class="btn" id="pGeo">今いる場所を使う</button>':''}<button class="btn main" id="pOk">ここに決める</button><button class="btn" id="pNo">やめる</button></div><div class="err" id="pErr" hidden></div>`;
+    const done=p=>{bar.hidden=true;$('cross').hidden=true;$('layer1').hidden=$('layer2').hidden=false;state.picking=false;follow=true;satOn(false);res(p);};
+    $('pOk').onclick=()=>{const c=map.getCenter().wrap();done([+c.lng.toFixed(5),+c.lat.toFixed(5)]);};
+    $('pNo').onclick=()=>done(null);
+    if(geo)$('pGeo').onclick=()=>{
+      if(!navigator.geolocation){$('pErr').hidden=false;$('pErr').textContent='この端末では現在地を使えません。地図で合わせてください。';return;}
+      navigator.geolocation.getCurrentPosition(g=>map.flyTo({center:[g.coords.longitude,g.coords.latitude],zoom:16.5,duration:1200,essential:true}),()=>{$('pErr').hidden=false;$('pErr').textContent='現在地を取得できませんでした。地図で合わせてください。';},{enableHighAccuracy:true,timeout:9000});
+    };
+  });
+}
+
+/* ---------- お店の入力 ---------- */
+function openShop(shop,onDone){
+  const d=shop?{...shop}:{name:'',p:null,memo:''};
+  const L=$('layer2');
+  const used=shop&&D.buys.some(b=>b.shop===shop.id);
+  L.innerHTML=`<div class="over"><header><h2>${shop?'お店を編集':'お店を追加'}</h2><button id="sClose">閉じる</button></header>
+    <div class="scroll">
+      <div class="field"><label for="sName">お店の名前</label><input type="text" id="sName" value="${esc(d.name)}"></div>
+      <div class="field"><span class="t">場所</span><button class="btn" id="sPick">${d.p?'場所を指定し直す':'地図で場所を指定する'}</button><div class="help" id="sP"></div></div>
+      <div class="field"><label for="sMemo">メモ（定休日など）</label><textarea id="sMemo">${esc(d.memo)}</textarea></div>
+      ${shop&&!used?'<div class="field"><button class="btn" id="sDel">このお店を消す</button></div>':''}
+    </div><footer><div class="err" id="sErr" hidden></div><button class="btn main" id="sSave">お店を保存</button></footer></div>`;
+  const pText=()=>{$('sP').textContent=d.p?'場所を指定しました。':'場所を指定しないと地球儀には出ません。通販の店は地域のあたりで大丈夫です。';};pText();
+  const close=()=>{L.innerHTML='';};
+  $('sClose').onclick=close;
+  $('sPick').onclick=async()=>{
+    const last=D.shops.filter(s=>s.p).slice(-1)[0];
+    const p=await pick({title:'お店の場所を指定',center:d.p||(last&&last.p)||JAPAN,zoom:d.p?15:11,geo:true});
+    if(p===undefined){$('sErr').hidden=false;$('sErr').textContent='地図を読み込めていません。通信できる場所で指定してください。';return;}
+    if(p){d.p=p;$('sPick').textContent='場所を指定し直す';pText();}
+  };
+  $('sSave').onclick=async()=>{
+    const name=$('sName').value.trim();
+    if(!name){$('sErr').hidden=false;$('sErr').textContent='お店の名前を入れてください。';$('sName').focus();return;}
+    const o={id:(shop&&shop.id)||uid(),at:(shop&&shop.at)||Date.now(),name,p:d.p,memo:$('sMemo').value.trim()};
+    await save('shops',o);close();drawTabs();mapSync();onDone&&onDone(o);
+  };
+  if($('sDel')){let armed=false;$('sDel').onclick=async()=>{if(!armed){armed=true;$('sDel').textContent='もう一度押すと消します';return;}await remove('shops',shop.id);close();state.shop=null;renderAll();refocus();};}
+  if(!shop)setTimeout(()=>$('sName').focus(),50);
+}
+
+/* ---------- 豆の入力 ---------- */
+function downscale(file){return new Promise((ok,no)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{const k=Math.min(1,1000/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);ok(c.toDataURL('image/jpeg',.78));};im.onerror=()=>{URL.revokeObjectURL(u);no(new Error('image'));};im.src=u;});}
+function openForm({buy,from,promote}){
+  const edit=buy||promote,src=edit||from,be=src?beanOf(src.bean):null,L=$('layer1');
+  const lastShop=bought()[0]?.shop;
+  const d={bought:!promote&&buy?buy.bought:true,shop:(src&&src.shop)||state.shop||lastShop||(D.shops[0]&&D.shops[0].id)||null,
+    name:be?be.name:'',origin:be&&be.origin?{...be.origin}:null,pinned:!!(be&&be.origin&&be.origin.pinned),proc:be?be.proc||'':'',roast:be&&be.roast!=null?be.roast:null,
+    price:src&&src.price||'',grams:src&&src.grams||'',date:buy?buy.date:today(),roastDate:buy?buy.roastDate||'':'',
+    memo:buy?buy.memo||'':'',shopMemo:src?src.shopMemo||'':'',again:buy?buy.again:null,taste:buy&&buy.taste?[...buy.taste]:null,shopTaste:src&&src.shopTaste?[...src.shopTaste]:null,photo:buy?buy.photo||null:null,photoData:null};
+  let tasteTab=d.shopTaste&&!d.taste&&!buy?'shop':'mine';
+  const title=buy?'記録を編集':promote?'買った豆を記録':from?'また買った':'豆を記録';
+  const countries=ORIGIN_TABLE.map(x=>x[0]);
+  L.innerHTML=`<div class="over"><header><h2>${title}</h2><button id="fClose">閉じる</button></header>
+  <div class="scroll">
+    <div class="field"><div class="chips" id="fMode"></div></div>
+    <div class="field"><span class="t">お店</span><div class="chips" id="fShops"></div></div>
+    <div class="field"><label for="fName">豆の名前</label><input type="text" id="fName" list="fNames" autocomplete="off" value="${esc(d.name)}"><datalist id="fNames">${D.beans.map(b=>`<option value="${esc(b.name)}">`).join('')}</datalist></div>
+    <div class="field"><span class="t">産地（ブレンドは空のままで大丈夫です）</span><div class="half"><select id="fCountry" aria-label="国"><option value="">国を選ぶ</option>${countries.map(c=>`<option>${esc(c)}</option>`).join('')}</select><select id="fRegion" aria-label="地域"></select></div>
+      <div style="margin-top:8px"><button class="link" id="fPin"></button></div><div class="err" id="fPinErr" hidden></div></div>
+    <div class="field"><span class="t">精製</span><div class="chips" id="fProc"></div></div>
+    <div class="field"><span class="t">焙煎度 <span id="fRoastName"></span></span><div class="roastPick" id="fRoast"></div></div>
+    <div class="field half"><div><label for="fPrice">値段（円）</label><input type="number" inputmode="numeric" id="fPrice" min="0" value="${esc(d.price)}"></div><div><label for="fGrams">量（g）</label><input type="number" inputmode="numeric" id="fGrams" min="0" value="${esc(d.grams)}"></div></div>
+    <div class="field" style="margin-top:8px"><div class="chips" id="fG"></div></div>
+    <div class="field half" id="fDates"><div><label for="fDate">買った日</label><input type="date" id="fDate" value="${esc(d.date)}"></div><div><label for="fRoastDate">焙煎日</label><input type="date" id="fRoastDate" value="${esc(d.roastDate)}"></div></div>
+    <div class="field"><span class="t">袋の写真</span><button class="btn" id="fPhotoBtn">写真を入れる</button><input type="file" accept="image/*" id="fPhoto" hidden><div id="fPrev"></div></div>
+    <div class="field"><label for="fShopMemo">お店の説明</label><textarea id="fShopMemo" placeholder="店頭のカードに書いてあること">${esc(d.shopMemo)}</textarea></div>
+    <div class="field"><span class="t">味のチャート（指で動かせます。書かなくても大丈夫です）</span><div class="chips" id="fTasteTab"></div><div id="fTaste"></div><div style="text-align:center"><button class="link" id="fTasteClear">このチャートを消す</button></div></div>
+    <div class="field" id="fAgainBox"><span class="t">次回</span><div class="chips" id="fAgain"></div></div>
+    <div class="field" id="fMemoBox"><label for="fMemo">感想</label><textarea id="fMemo">${esc(d.memo)}</textarea></div>
+    ${buy?'<div class="field"><button class="btn" id="fDel">この記録を消す</button></div>':''}
+  </div><footer><div class="err" id="fErr" hidden></div><button class="btn main" id="fSave">保存する</button></footer></div>`;
+  const chips=(id,opts,cur,set)=>{const el=$(id);el.innerHTML=opts.map(([v,t])=>`<button type="button" class="chip" aria-pressed="${cur()===v}" data-v="${esc(v)}">${esc(t)}</button>`).join('');el.querySelectorAll('.chip').forEach((b,i)=>b.onclick=()=>{set(opts[i][0]);chips(id,opts,cur,set);});};
+  const mode=()=>{chips('fMode',[[true,'買った'],[false,'気になるだけ']],()=>d.bought,v=>{d.bought=v;mode();});$('fAgainBox').hidden=!d.bought;$('fMemoBox').querySelector('label').textContent=d.bought?'感想':'メモ';$('fDates').querySelector('label').textContent=d.bought?'買った日':'見かけた日';};
+  const shopsDraw=()=>{
+    const el=$('fShops'),sh=[...D.shops].sort((a,b)=>a.at-b.at);
+    el.innerHTML=sh.map(s=>`<button type="button" class="chip" aria-pressed="${d.shop===s.id}" data-id="${s.id}">${esc(s.name)}</button>`).join('')+'<button type="button" class="chip" id="fShopNew">お店を追加</button>';
+    el.querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>{d.shop=b.dataset.id;shopsDraw();});
+    $('fShopNew').onclick=()=>openShop(null,s=>{d.shop=s.id;shopsDraw();});
+  };
+  const regionDraw=()=>{
+    const row=ORIGIN_TABLE.find(x=>x[0]===(d.origin&&d.origin.country));
+    $('fRegion').innerHTML='<option value="">地域を選ぶ</option>'+(row?row.slice(1).map(r=>`<option>${esc(r[0])}</option>`).join(''):'');
+    $('fRegion').disabled=!row;
+    $('fRegion').value=(d.origin&&d.origin.region)||'';
+    if($('fRegion').value===''&&d.origin&&d.origin.region&&row){$('fRegion').insertAdjacentHTML('beforeend',`<option>${esc(d.origin.region)}</option>`);$('fRegion').value=d.origin.region;}
+    $('fPin').textContent=d.pinned?'農園の場所を指定しました（指定し直す）':'農園の場所を地図で指定する';
+    $('fPin').hidden=!d.origin;
+  };
+  const setOrigin=(country,region)=>{
+    if(!country){d.origin=null;d.pinned=false;return;}
+    const row=ORIGIN_TABLE.find(x=>x[0]===country),r=row&&(row.slice(1).find(x=>x[0]===region)||row[1]);
+    d.origin={country,region:region||'',p:r?[r[1],r[2]]:null};d.pinned=false;
+  };
+  $('fCountry').value=(d.origin&&d.origin.country)||'';
+  $('fCountry').onchange=()=>{setOrigin($('fCountry').value,'');regionDraw();};
+  $('fRegion').onchange=()=>{setOrigin($('fCountry').value,$('fRegion').value);regionDraw();};
+  $('fPin').onclick=async()=>{
+    const p=await pick({title:'農園の場所を指定',center:d.origin.p||HOME,zoom:d.pinned?13:9,sat:true});
+    if(p===undefined){$('fPinErr').hidden=false;$('fPinErr').textContent='地図を読み込めていません。通信できる場所で指定してください。';return;}
+    if(p){d.origin.p=p;d.origin.pinned=true;d.pinned=true;regionDraw();}
+  };
+  const procDraw=()=>chips('fProc',PROC.map(p=>[p,p]),()=>d.proc,v=>{d.proc=d.proc===v?'':v;procDraw();});
+  const roastDraw=()=>{
+    $('fRoast').innerHTML=ROAST_C.map((c,i)=>`<button type="button" style="background:${c}" aria-label="${ROAST[i]}" aria-pressed="${d.roast===i}"></button>`).join('');
+    $('fRoastName').textContent=d.roast!=null?ROAST[d.roast]:'';
+    $('fRoast').querySelectorAll('button').forEach((b,i)=>b.onclick=()=>{d.roast=d.roast===i?null:i;roastDraw();});
+  };
+  const gDraw=()=>chips('fG',GRAMS.map(g=>[g,g+'g']),()=>+$('fGrams').value,v=>{$('fGrams').value=v;gDraw();});
+  $('fGrams').oninput=gDraw;
+  const againDraw=()=>chips('fAgain',[[2,'また買う'],[1,'どちらでも'],[0,'もう買わない']],()=>d.again,v=>{d.again=d.again===v?null:v;againDraw();});
+  /* 味のチャート入力：指を置いた方向の軸を、中心からの距離で 1〜5 に合わせる */
+  const tasteDraw=()=>{
+    chips('fTasteTab',[['mine','自分'],['shop','お店の説明']],()=>tasteTab,v=>{tasteTab=v;tasteDraw();});
+    const key=tasteTab==='mine'?'taste':'shopTaste',cx=120,cy=108,R=76;
+    const pt=(i,v)=>{const a=-Math.PI/2+i*2*Math.PI/5,r=R*v/5;return [cx+r*Math.cos(a),cy+r*Math.sin(a)];};
+    const poly=vals=>vals.map((v,i)=>pt(i,v).map(x=>x.toFixed(1)).join(',')).join(' ');
+    const paint=()=>{
+      const v=d[key],ghost=tasteTab==='mine'?d.shopTaste:null,shape=v||[3,3,3,3,3];
+      let s=`<svg id="tasteIn" viewBox="0 0 240 216" role="img" aria-label="味のチャートの入力">`;
+      [1,2,3,4,5].forEach(n=>s+=`<polygon points="${poly(Array(5).fill(n))}" fill="none" stroke="#C4C8A8" stroke-width="${n===5?1:.75}"/>`);
+      for(let i=0;i<5;i++){const[x,y]=pt(i,5);s+=`<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#C4C8A8" stroke-width=".75"/>`;}
+      if(ghost)s+=`<polygon points="${poly(ghost)}" fill="none" stroke="#2A1B14" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+      s+=`<polygon points="${poly(shape)}" fill="#B3173F" fill-opacity="${v?.18:.06}" stroke="#B3173F" stroke-opacity="${v?1:.35}" stroke-width="2" stroke-linejoin="round"/>`;
+      shape.forEach((n,i)=>{const[x,y]=pt(i,n);s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="6.5" fill="#B3173F" fill-opacity="${v?1:.35}" stroke="#F0F1E2" stroke-width="2"/>`;});
+      AXES.forEach((a,i)=>{const[x,y]=pt(i,6.15);s+=`<text x="${x.toFixed(1)}" y="${(y+4).toFixed(1)}" text-anchor="middle">${a}${v?' '+v[i]:''}</text>`;});
+      $('fTaste').innerHTML=s+'</svg>';
+      $('fTasteClear').hidden=!v;
+      $('tasteIn').addEventListener('pointerdown',down);
+    };
+    /* 描き直すと要素が入れ替わるので、指の位置は毎回いまの要素で測る */
+    const hit=(e,fixed)=>{
+      const r=$('tasteIn').getBoundingClientRect(),k=240/r.width,x=(e.clientX-r.left)*k-cx,y=(e.clientY-r.top)*k-cy;
+      let axis=fixed;
+      if(axis==null){let a=Math.atan2(y,x)+Math.PI/2;if(a<0)a+=2*Math.PI;axis=Math.round(a/(2*Math.PI/5))%5;}
+      const ang=-Math.PI/2+axis*2*Math.PI/5,along=x*Math.cos(ang)+y*Math.sin(ang);
+      if(!d[key])d[key]=tasteTab==='mine'&&d.shopTaste?[...d.shopTaste]:[3,3,3,3,3];
+      d[key][axis]=Math.max(1,Math.min(5,Math.round(along/R*5)));
+      return axis;
+    };
+    const down=e=>{
+      e.preventDefault();
+      const ax=hit(e,null);paint();
+      const move=m=>{m.preventDefault();hit(m,ax);paint();};
+      const up=()=>{removeEventListener('pointermove',move);removeEventListener('pointerup',up);removeEventListener('pointercancel',up);};
+      addEventListener('pointermove',move,{passive:false});addEventListener('pointerup',up);addEventListener('pointercancel',up);
+    };
+    paint();
+    $('fTasteClear').onclick=()=>{d[key]=null;tasteDraw();};
+  };
+  const photoDraw=async()=>{
+    let src=d.photoData;
+    if(!src&&d.photo){const ph=await dbGet('photos',d.photo).catch(()=>null);src=ph&&ph.data;}
+    $('fPrev').innerHTML=src?`<img class="photoPrev" alt="袋の写真" src="${src}">`:'';
+    $('fPhotoBtn').textContent=src?'写真を入れ替える':'写真を入れる';
+  };
+  $('fPhotoBtn').onclick=()=>$('fPhoto').click();
+  $('fPhoto').onchange=async()=>{const f=$('fPhoto').files[0];if(!f)return;try{d.photoData=await downscale(f);photoDraw();}catch(e){$('fErr').hidden=false;$('fErr').textContent='この写真は読み込めませんでした。別の写真を選んでください。';}};
+  $('fName').onchange=()=>{
+    const hit=D.beans.find(b=>b.name===$('fName').value.trim());
+    if(hit&&!buy){d.origin=hit.origin?{...hit.origin}:null;d.pinned=!!(hit.origin&&hit.origin.pinned);d.proc=hit.proc||'';d.roast=hit.roast!=null?hit.roast:null;$('fCountry').value=(d.origin&&d.origin.country)||'';regionDraw();procDraw();roastDraw();}
+  };
+  mode();shopsDraw();regionDraw();procDraw();roastDraw();gDraw();againDraw();tasteDraw();photoDraw();
+  const clearErr=()=>{$('fErr').hidden=true;};L.querySelector('.scroll').addEventListener('input',clearErr);$('fShops').addEventListener('click',clearErr);
+  const err=(m,el)=>{$('fErr').hidden=false;$('fErr').textContent=m;if(el)el.focus();};
+  $('fClose').onclick=()=>{L.innerHTML='';};
+  $('fSave').onclick=async()=>{
+    const name=$('fName').value.trim();
+    if(!d.shop)return err('お店を選んでください。');
+    if(!name)return err('豆の名前を入れてください。',$('fName'));
+    const date=$('fDate').value||today();
+    let bean=buy||promote?beanOf((buy||promote).bean):D.beans.find(b=>b.name===name);
+    const isNew=!edit||!!promote;
+    const beanRec={id:(bean&&bean.id)||uid(),name,origin:d.origin,proc:d.proc,roast:d.roast};
+    let photo=d.photo;
+    try{
+      await save('beans',beanRec);
+      if(d.photoData){photo=photo||uid();await dbPut('photos',{id:photo,data:d.photoData});}
+      const rec={id:(edit&&edit.id)||uid(),at:(edit&&edit.at)||Date.now(),bean:beanRec.id,shop:d.shop,bought:d.bought,date,roastDate:$('fRoastDate').value||'',price:+$('fPrice').value||0,grams:+$('fGrams').value||0,memo:$('fMemo').value.trim(),shopMemo:$('fShopMemo').value.trim(),again:d.bought?d.again:null,taste:d.taste,shopTaste:d.shopTaste,photo};
+      await save('buys',rec);
+      L.innerHTML='';
+      drawTabs();mapSync();
+      if(!rec.bought){state.shop=rec.shop;drawTabs();drawList();refocus();return;}
+      state.buy=rec.id;drawDetail(rec);
+      if(isNew&&lineOf(rec))flight(rec);
+      else{const c=lineOf(rec);if(ready&&c){clearFlight();map.setPaintProperty('routes','line-opacity',.28);hl([lineF(c)]);}}
+    }catch(e){err('保存できませんでした。端末の空き容量を確認して、もう一度押してください。');}
+  };
+  if(buy){let armed=false;$('fDel').onclick=async()=>{
+    if(!armed){armed=true;$('fDel').textContent='もう一度押すと消します';return;}
+    await remove('buys',buy.id);
+    if(buy.photo)await dbDel('photos',buy.photo).catch(()=>{});
+    if(!D.buys.some(b=>b.bean===buy.bean))await remove('beans',buy.bean);
+    L.innerHTML='';state.buy=null;renderAll();refocus();
+  };}
+}
+
+/* ---------- バックアップ ---------- */
+async function clearStore(s){await tx(s,'readwrite',st=>st.clear());}
+function openMore(){
+  const L=$('layer1');
+  const last=+kv('lastBackup')||0;
+  L.innerHTML=`<div class="over"><header><h2>バックアップ</h2><button id="mClose">閉じる</button></header><div class="scroll">
+    <p>記録はこの端末の中だけに保存されています。ブラウザの「Cookieとサイトデータ」を消すと、記録も消えます。ときどき書き出して、Googleドライブなどに置いておくと安心です。</p>
+    <p>今の記録：お店 ${D.shops.length}軒、豆 ${D.beans.length}種類、購入 ${D.buys.length}件<br>最後の書き出し：${last?jd(new Date(last).toISOString().slice(0,10)):'まだありません'}</p>
+    <div class="acts"><button class="btn main" id="mOut">書き出す</button><button class="btn" id="mIn">書き出したファイルから戻す</button><input type="file" id="mFile" accept=".json,application/json" hidden></div>
+    <div class="err" id="mErr" hidden style="margin-top:12px"></div><div id="mMsg" style="margin-top:12px"></div>
+  </div></div>`;
+  $('mClose').onclick=()=>{L.innerHTML='';};
+  $('mOut').onclick=async()=>{
+    const photos=await dbAll('photos');
+    const data={app:'mamemiru',version:1,exportedAt:new Date().toISOString(),shops:D.shops,beans:D.beans,buys:D.buys,photos};
+    const url=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'}));
+    const a=document.createElement('a');a.href=url;a.download=`mamemiru-${today()}.json`;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);
+    kv('lastBackup',String(Date.now()));
+    $('mMsg').textContent='書き出しました。ダウンロードフォルダを確認してください。';
+    drawListIfVisible();
+  };
+  $('mIn').onclick=()=>$('mFile').click();
+  $('mFile').onchange=async()=>{
+    const f=$('mFile').files[0];if(!f)return;
+    let data;
+    try{data=JSON.parse(await f.text());if(data.app!=='mamemiru'||!Array.isArray(data.buys))throw 0;}
+    catch(e){$('mErr').hidden=false;$('mErr').textContent='豆ミルのバックアップファイルではありません。ファイルを確かめてください。';return;}
+    $('mErr').hidden=true;
+    $('mMsg').innerHTML=`<p>今の記録を消して、このファイルの内容（購入 ${data.buys.length}件）に置き換えます。</p><button class="btn main" id="mDo">置き換える</button>`;
+    $('mDo').onclick=async()=>{
+      for(const s of ['shops','beans','buys','photos']){await clearStore(s);for(const o of data[s]||[])await dbPut(s,o);}
+      await dbLoad();state.buy=null;state.shop=null;L.innerHTML='';renderAll();refocus();
+    };
+  };
+}
+function drawListIfVisible(){if(!state.buy)drawList();}
+
+/* ---------- 起動 ---------- */
+const MB='https://api.mapbox.com/mapbox-gl-js/v3.9.0';
+function initMap(){
   mapboxgl.accessToken=TOKEN;
-  map=new mapboxgl.Map({container:'map',style:'mapbox://styles/mapbox/light-v11',center:HOME,zoom:1,projection:'globe',attributionControl:true});
+  map=new mapboxgl.Map({container:'map',style:'mapbox://styles/mapbox/light-v11',center:HOME,zoom:1,projection:'globe'});
   map.jumpTo({zoom:globeZoom()});
   map.on('style.load',()=>{addLayers();opening();});
   map.on('error',e=>{const st=e.error&&e.error.status;if((st===401||st===403)&&e.sourceId!=='sat')fail('地図を読み込めません。MapboxのトークンのURL制限に、このページのアドレスを追加してください。');});
-  map.on('dragstart',()=>{follow=false;});
+  map.on('dragstart',()=>{if(!state.picking)follow=false;});
   map.on('click',e=>{
-    if(!ready)return;
+    if(!ready||state.picking)return;
     const r=16,box=[[e.point.x-r,e.point.y-r],[e.point.x+r,e.point.y+r]];
     const hit=map.queryRenderedFeatures(box,{layers:['shops','origins']});
     if(!hit.length)return;
     const sh=hit.find(f=>f.layer.id==='shops');
     if(sh)return pickShop(sh.properties.k);
-    const b=BEANS.find(x=>x.o===hit[0].properties.k);
-    if(b)pickBean(b.id);
+    pickBuy(hit[0].properties.id,true);
   });
   addEventListener('resize',()=>map.resize());
 }
-window.__mame={state,pickBean,pickShop,get map(){return map},get ready(){return ready}};
+function loadMap(){
+  const css=document.createElement('link');css.rel='stylesheet';css.href=MB+'/mapbox-gl.css';document.head.append(css);
+  const sc=document.createElement('script');sc.src=MB+'/mapbox-gl.js';sc.onload=initMap;
+  sc.onerror=()=>fail('地球儀は通信できるときに表示されます。記録はこのまま使えます。');
+  document.head.append(sc);
+  setTimeout(()=>{if(!ready)fail('地球儀は通信できるときに表示されます。記録はこのまま使えます。');},10000);
+}
+$('add').onclick=()=>openForm({});
+$('moreBtn').onclick=openMore;
+(async()=>{
+  try{await openDB();await dbLoad();}
+  catch(e){fail('この端末では記録を保存できません。ブラウザの設定を確認してください。');}
+  drawTabs();drawList();loadMap();
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(()=>{});
+})();
 </script>
 </body>
 </html>
