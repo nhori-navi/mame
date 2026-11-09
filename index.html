@@ -27,7 +27,6 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 #map{position:absolute;inset:0}
 #brand{position:absolute;left:16px;top:calc(12px + env(safe-area-inset-top));pointer-events:none}
 #brand b{display:block;font:700 26px/1.2 var(--mincho);letter-spacing:.06em;text-shadow:0 0 6px var(--paper),0 0 3px var(--paper),0 0 1px var(--paper)}
-#curtain{position:absolute;inset:0;background:var(--paper);opacity:0;pointer-events:none;transition:opacity .3s}
 .float{position:absolute;right:12px;bottom:28px;min-height:44px;padding:0 16px;border-radius:22px;background:var(--ink);color:var(--sheet);font-size:14px}
 #notice{position:absolute;left:12px;right:12px;top:84px;padding:10px 12px;background:var(--sheet);border:1px solid var(--cherry);border-radius:4px;font-size:13px}
 #sheet{background:var(--sheet);display:flex;flex-direction:column;min-height:0;padding-bottom:env(safe-area-inset-bottom);border-top:1px solid var(--line)}
@@ -66,7 +65,6 @@ svg text{font-family:var(--gothic);font-size:12px;fill:var(--ink)}
 <div id="app">
   <div id="stage">
     <div id="map" role="img" aria-label="産地からお店への航路を描いた地球儀"></div>
-    <div id="curtain"></div>
     <div id="brand"><b>豆ミル</b></div>
     <div id="notice" hidden></div>
     <button id="float" class="float" hidden></button>
@@ -249,9 +247,15 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function idle(ms){return new Promise(res=>{const on=()=>{clearTimeout(t);res();};map.once('idle',on);const t=setTimeout(()=>{map.off('idle',on);res();},ms);});}
 const smooth=(a,b,x)=>{const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t);};
 function satOn(on){if(!ready)return;try{map.setLayoutProperty('sat','visibility',on?'visible':'none');if(!on)map.setPaintProperty('sat','raster-opacity',0);}catch(e){}}
-const curtain=on=>{$('curtain').style.opacity=on?1:0;};
+/* 寄りは「ゆっくり→だんだん速く」、引きはその逆。止まる瞬間だけ少しなじませる */
+const endSoft=(t,e)=>t<1-e?t/(1-e/2):1-(1-t)**2/(e*(2-e));
+const easeIn=t=>endSoft(t,.05)**2.4;
+const easeOut=t=>1-easeIn(1-t);
+const bothEnds=(t,e)=>t<e?t*t/(2*e*(1-e)):t<1-e?(t-e/2)/(1-e):1-(1-t)**2/(2*e*(1-e));
+/* 農園からの引きは速く始まって減速し、店への寄りはゆっくり始まって加速する */
+const flightTime=t=>{const s=bothEnds(t,.04);return s+CAM.swing*Math.sin(2*Math.PI*s)/(2*Math.PI);};
 /* カメラの設計：画面に見える幅を「出発点や到着点からの距離」に比例させる。豆は画面上でほぼ一定の速さに見える */
-const CAM={farmZoom:12.8,shopZoom:15.8,pitch:55,turn:16,slope:1.6,duration:9500,hold:700,globe:.36};
+const CAM={farmZoom:12.8,shopZoom:15.8,pitch:55,turn:16,slope:1.6,duration:9500,approach:4200,hold:500,globe:.3,swing:.7};
 function cameraPlan(c){
   let S=0;for(let i=0;i<c.length-1;i++)S+=gcKm(c[i],c[i+1]);
   const zg=globeZoom(),wg=12000,w0=wg/2**(CAM.farmZoom-zg),ws=wg/2**(CAM.shopZoom-zg);
@@ -286,27 +290,44 @@ async function flight(b){
   const m=bean().setLngLat(origin).addTo(map);
   if(calm){hl([lineF(c)]);m.setLngLat(shop);map.jumpTo({center:shop,zoom:plan.zg+.35,pitch:0,bearing:0});showFloat(b.s);return;}
   follow=true;
-  /* 幕を下ろして農園へ移り、写真が届いてから幕を上げる */
-  curtain(true);await sleep(320);if(my!==run)return;
-  map.jumpTo({center:origin,zoom:CAM.farmZoom,pitch:CAM.pitch,bearing:-CAM.turn});
-  satOn(true);map.setPaintProperty('sat','raster-opacity',1);
-  try{map.easeTo({center:shop,zoom:CAM.shopZoom,pitch:CAM.pitch,bearing:CAM.turn,duration:1,preloadOnly:true});}catch(e){}
-  await idle(2800);if(my!==run)return;
-  curtain(false);await sleep(CAM.hold+300);if(my!==run)return;
-  const t0=performance.now(),ease=t=>.5-.5*Math.cos(Math.PI*t);
+  const near=z=>smooth(plan.zg+2.5,plan.zg+7,z),satAt=z=>smooth(plan.zg+2.6,plan.zg+6,z);
+  /* 店などに寄っているときは、まず地球まで引く */
+  if(map.getZoom()>plan.zg+1){
+    map.flyTo({zoom:plan.zg+.2,pitch:0,bearing:0,duration:2000,easing:easeOut,essential:true});
+    await sleep(2050);if(my!==run)return;
+  }
+  /* 地球から農園へ、切り替えなしで寄っていく */
+  satOn(true);
+  try{map.easeTo({center:origin,zoom:CAM.farmZoom,pitch:CAM.pitch,bearing:-CAM.turn,duration:1,preloadOnly:true});
+      map.easeTo({center:shop,zoom:CAM.shopZoom,pitch:CAM.pitch,bearing:CAM.turn,duration:1,preloadOnly:true});}catch(e){}
+  const c0=map.getCenter(),z0=map.getZoom(),way=gcLine([c0.lng,c0.lat],origin),wayN=way.length-1;
+  const t1=performance.now();
+  await new Promise(res=>{(function tick(now){
+    if(my!==run||!follow)return res();
+    const p=Math.max(0,Math.min(1,(now-t1)/CAM.approach)),zoom=z0+(CAM.farmZoom-z0)*easeIn(p);
+    const q=smooth(0,.62,p)*wayN,i=Math.min(wayN-1,Math.floor(q)),u=q-i;
+    const pos=[way[i][0]+(way[i+1][0]-way[i][0])*u,way[i][1]+(way[i+1][1]-way[i][1])*u];
+    map.jumpTo({center:p>=.62?origin:pos,zoom,pitch:CAM.pitch*near(zoom),bearing:-CAM.turn*near(zoom)});
+    map.setPaintProperty('sat','raster-opacity',satAt(zoom));
+    p<1?requestAnimationFrame(tick):res();
+  })(t1);});
+  if(my!==run)return;
+  /* 写真が届くまで、農園で少しだけ止まる */
+  if(follow){await sleep(CAM.hold);await idle(1400);if(my!==run)return;}
+  const t0=performance.now();
   const lastI=c.length-1,step=plan.S/lastI;
   let satGone=false;
   await new Promise(res=>{(function tick(now){
     if(my!==run)return res();
-    const p=Math.min(1,(now-t0)/CAM.duration),{x,zoom}=plan.at(ease(p));
+    const p=Math.max(0,Math.min(1,(now-t0)/CAM.duration)),{x,zoom}=plan.at(flightTime(p));
     const f=Math.min(lastI,x/step),i=Math.min(lastI-1,Math.floor(f)),u=f-i;
     const pos=[c[i][0]+(c[i+1][0]-c[i][0])*u,c[i][1]+(c[i+1][1]-c[i][1])*u];
     hl([lineF([...c.slice(0,i+1),pos])]);
     m.setLngLat(pos);
-    const near=smooth(plan.zg+2.5,plan.zg+7,zoom),first=x<plan.S/2;
-    if(follow)map.jumpTo({center:pos,zoom,pitch:CAM.pitch*near,bearing:(first?-CAM.turn:CAM.turn)*near});
+    const k=near(zoom),first=x<plan.S/2;
+    if(follow)map.jumpTo({center:pos,zoom,pitch:CAM.pitch*k,bearing:(first?-CAM.turn:CAM.turn)*k});
     if(!satGone){
-      const o=follow&&first?smooth(plan.zg+2.6,plan.zg+6,zoom):0;
+      const o=follow&&first?satAt(zoom):0;
       map.setPaintProperty('sat','raster-opacity',o);
       if(o===0){satGone=true;satOn(false);}
     }
@@ -317,7 +338,7 @@ async function flight(b){
   state.close=follow;
   showFloat(b.s);
 }
-function clearFlight(){run++;curtain(false);satOn(false);if(flyer)flyer.remove();}
+function clearFlight(){run++;satOn(false);if(flyer)flyer.remove();}
 function showFloat(shopId){
   const f=$('float');
   if(!shopId){f.hidden=true;return;}
@@ -326,7 +347,7 @@ function showFloat(shopId){
   f.onclick=()=>{
     state.close=!state.close;
     const s=SHOPS[shopId];
-    map.flyTo(state.close?{center:s.p,zoom:CAM.shopZoom,pitch:CAM.pitch,bearing:CAM.turn,duration:2800,essential:true}:{center:s.p,zoom:globeZoom()+.35,pitch:0,bearing:0,duration:2600,essential:true});
+    map.flyTo(state.close?{center:s.p,zoom:CAM.shopZoom,pitch:CAM.pitch,bearing:CAM.turn,duration:3400,easing:easeIn,essential:true}:{center:s.p,zoom:globeZoom()+.35,pitch:0,bearing:0,duration:3000,easing:easeOut,essential:true});
     showFloat(shopId);
   };
 }
