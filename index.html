@@ -27,6 +27,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 #map{position:absolute;inset:0}
 #brand{position:absolute;left:16px;top:calc(12px + env(safe-area-inset-top));pointer-events:none}
 #brand b{display:block;font:700 26px/1.2 var(--mincho);letter-spacing:.06em;text-shadow:0 0 6px var(--paper),0 0 3px var(--paper),0 0 1px var(--paper)}
+#curtain{position:absolute;inset:0;background:var(--paper);opacity:0;pointer-events:none;transition:opacity .3s}
 .float{position:absolute;right:12px;bottom:28px;min-height:44px;padding:0 16px;border-radius:22px;background:var(--ink);color:var(--sheet);font-size:14px}
 #notice{position:absolute;left:12px;right:12px;top:84px;padding:10px 12px;background:var(--sheet);border:1px solid var(--cherry);border-radius:4px;font-size:13px}
 #sheet{background:var(--sheet);display:flex;flex-direction:column;min-height:0;padding-bottom:env(safe-area-inset-bottom);border-top:1px solid var(--line)}
@@ -65,6 +66,7 @@ svg text{font-family:var(--gothic);font-size:12px;fill:var(--ink)}
 <div id="app">
   <div id="stage">
     <div id="map" role="img" aria-label="産地からお店への航路を描いた地球儀"></div>
+    <div id="curtain"></div>
     <div id="brand"><b>豆ミル</b></div>
     <div id="notice" hidden></div>
     <button id="float" class="float" hidden></button>
@@ -212,6 +214,8 @@ function routeFeatures(){
 function addLayers(){
   map.setFog({range:[2,12],color:C.paper,'high-color':C.paper,'space-color':C.paper,'horizon-blend':.012,'star-intensity':0});
   tint();
+  map.addSource('sat',{type:'raster',url:'mapbox://mapbox.satellite',tileSize:256});
+  map.addLayer({id:'sat',type:'raster',source:'sat',minzoom:4,layout:{visibility:'none'},paint:{'raster-opacity':0,'raster-fade-duration':0}});
   map.addSource('routes',{type:'geojson',data:fc([])});
   map.addLayer({id:'routes',type:'line',source:'routes',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':C.cherry,'line-width':['interpolate',['linear'],['get','n'],1,1.4,3,3],'line-opacity':.8}});
   map.addSource('hl',{type:'geojson',data:fc([])});
@@ -221,7 +225,7 @@ function addLayers(){
   map.addSource('origins',{type:'geojson',data:fc(Object.entries(byO).map(([k,n])=>ptF(ORIGINS[k].p,{k,n,name:ORIGINS[k].name})))});
   map.addLayer({id:'origins',type:'circle',source:'origins',paint:{'circle-color':C.cherry,'circle-stroke-color':C.sheet,'circle-stroke-width':1.5,'circle-radius':['interpolate',['linear'],['get','n'],1,5,4,11]}});
   map.addLayer({id:'origin-name',type:'symbol',source:'origins',layout:{'text-field':['get','name'],'text-size':12,'text-offset':[0,.95],'text-anchor':'top'},paint:{'text-color':C.ink,'text-halo-color':C.sheet,'text-halo-width':1.6}});
-  map.addSource('shops',{type:'geojson',data:fc(Object.entries(SHOPS).map(([k,v])=>ptF(v.p,{k,name:v.name})))});
+  map.addSource('shops',{type:'geojson',data:fc(Object.entries(SHOPS).map(([k,v])=>ptF(v.p,{k,name:v.name.replace('（仮）','')})))});
   map.addLayer({id:'shops',type:'circle',source:'shops',paint:{'circle-color':C.ink,'circle-stroke-color':C.sheet,'circle-stroke-width':2,'circle-radius':6}});
   map.addLayer({id:'shop-name',type:'symbol',source:'shops',minzoom:3.5,layout:{'text-field':['get','name'],'text-size':13,'text-offset':[0,1],'text-anchor':'top'},paint:{'text-color':C.ink,'text-halo-color':C.sheet,'text-halo-width':1.8}});
   ready=true;
@@ -241,7 +245,32 @@ function opening(){
     if(p<1)requestAnimationFrame(tick);
   })(t0);
 }
-function wait(ms,my){return new Promise(res=>{const on=()=>{clearTimeout(t);res();};map.once('moveend',on);const t=setTimeout(()=>{map.off('moveend',on);res();},ms);}).then(()=>my===run);}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function idle(ms){return new Promise(res=>{const on=()=>{clearTimeout(t);res();};map.once('idle',on);const t=setTimeout(()=>{map.off('idle',on);res();},ms);});}
+const smooth=(a,b,x)=>{const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t);};
+function satOn(on){if(!ready)return;try{map.setLayoutProperty('sat','visibility',on?'visible':'none');if(!on)map.setPaintProperty('sat','raster-opacity',0);}catch(e){}}
+const curtain=on=>{$('curtain').style.opacity=on?1:0;};
+/* カメラの設計：画面に見える幅を「出発点や到着点からの距離」に比例させる。豆は画面上でほぼ一定の速さに見える */
+const CAM={farmZoom:12.8,shopZoom:15.8,pitch:55,turn:16,slope:1.6,duration:9500,hold:700,globe:.36};
+function cameraPlan(c){
+  let S=0;for(let i=0;i<c.length-1;i++)S+=gcKm(c[i],c[i+1]);
+  const zg=globeZoom(),wg=12000,w0=wg/2**(CAM.farmZoom-zg),ws=wg/2**(CAM.shopZoom-zg);
+  const a=Math.max(CAM.slope,2.1*wg/S),width=x=>Math.min(wg,w0+a*x,ws+a*(S-x));
+  const N=1600,dist=[],time=[0];
+  for(let i=0;i<=N;i++){const v=i/N;dist.push(S*(v<.5?.5*(2*v)**5:1-.5*(2*(1-v))**5));}
+  /* 地球全体が見えている区間に、全体の時間の GLOBE 割合を使う */
+  const spend=(k,x)=>(1+k*smooth(.15,.7,width(x)/wg))/width(x);
+  const build=k=>{let t=0,mid=0;time.length=1;for(let i=1;i<=N;i++){const ds=dist[i]-dist[i-1],d=ds*(spend(k,dist[i])+spend(k,dist[i-1]))/2;t+=d;if(width(dist[i])>=.4*wg)mid+=d;time.push(t);}return mid/t;};
+  let lo0=0,hi0=400;for(let n=0;n<26;n++){const k=(lo0+hi0)/2;build(k)<CAM.globe?lo0=k:hi0=k;}
+  build((lo0+hi0)/2);
+  const T=time[N];
+  return {S,zg,at(u){
+    const target=u*T;let lo=0,hi=N;
+    while(hi-lo>1){const m=(lo+hi)>>1;time[m]<=target?lo=m:hi=m;}
+    const x=dist[lo]+(dist[hi]-dist[lo])*((target-time[lo])/Math.max(1e-9,time[hi]-time[lo]));
+    return {x,zoom:zg+Math.log2(wg/width(x))};
+  }};
+}
 function bean(){
   if(flyer)return flyer;
   const el=document.createElement('div');el.className='bean';
@@ -250,30 +279,45 @@ function bean(){
 }
 async function flight(b){
   if(!ready)return;
-  const my=++run,c=lineOf(b),origin=ORIGINS[b.o].p,shop=SHOPS[b.s].p,z=globeZoom()+.35;
+  const my=++run,c=lineOf(b),origin=ORIGINS[b.o].p,shop=SHOPS[b.s].p,plan=cameraPlan(c);
+  state.close=false;
   map.setPaintProperty('routes','line-opacity',.28);
   hl([]);showFloat(null);
   const m=bean().setLngLat(origin).addTo(map);
-  if(calm){hl([lineF(c)]);m.setLngLat(shop);map.jumpTo({center:shop,zoom:z});showFloat(b.s);return;}
+  if(calm){hl([lineF(c)]);m.setLngLat(shop);map.jumpTo({center:shop,zoom:plan.zg+.35,pitch:0,bearing:0});showFloat(b.s);return;}
   follow=true;
-  map.flyTo({center:origin,zoom:z,duration:1100,essential:true});
-  if(!await wait(1500,my))return;
-  const D=Math.max(2400,Math.min(4200,gcKm(origin,shop)/3.4)),t0=performance.now();
-  const ease=x=>x<.5?2*x*x:1-(-2*x+2)**2/2;
+  /* 幕を下ろして農園へ移り、写真が届いてから幕を上げる */
+  curtain(true);await sleep(320);if(my!==run)return;
+  map.jumpTo({center:origin,zoom:CAM.farmZoom,pitch:CAM.pitch,bearing:-CAM.turn});
+  satOn(true);map.setPaintProperty('sat','raster-opacity',1);
+  try{map.easeTo({center:shop,zoom:CAM.shopZoom,pitch:CAM.pitch,bearing:CAM.turn,duration:1,preloadOnly:true});}catch(e){}
+  await idle(2800);if(my!==run)return;
+  curtain(false);await sleep(CAM.hold+300);if(my!==run)return;
+  const t0=performance.now(),ease=t=>.5-.5*Math.cos(Math.PI*t);
+  const lastI=c.length-1,step=plan.S/lastI;
+  let satGone=false;
   await new Promise(res=>{(function tick(now){
     if(my!==run)return res();
-    const p=Math.min(1,(now-t0)/D),f=ease(p)*(c.length-1),i=Math.min(c.length-2,Math.floor(f)),u=f-i;
+    const p=Math.min(1,(now-t0)/CAM.duration),{x,zoom}=plan.at(ease(p));
+    const f=Math.min(lastI,x/step),i=Math.min(lastI-1,Math.floor(f)),u=f-i;
     const pos=[c[i][0]+(c[i+1][0]-c[i][0])*u,c[i][1]+(c[i+1][1]-c[i][1])*u];
     hl([lineF([...c.slice(0,i+1),pos])]);
     m.setLngLat(pos);
-    if(follow)map.jumpTo({center:pos});
+    const near=smooth(plan.zg+2.5,plan.zg+7,zoom),first=x<plan.S/2;
+    if(follow)map.jumpTo({center:pos,zoom,pitch:CAM.pitch*near,bearing:(first?-CAM.turn:CAM.turn)*near});
+    if(!satGone){
+      const o=follow&&first?smooth(plan.zg+2.6,plan.zg+6,zoom):0;
+      map.setPaintProperty('sat','raster-opacity',o);
+      if(o===0){satGone=true;satOn(false);}
+    }
     p<1?requestAnimationFrame(tick):res();
   })(t0);});
   if(my!==run)return;
-  hl([lineF(c)]);m.setLngLat(c[c.length-1]);
+  hl([lineF(c)]);m.setLngLat(c[lastI]);
+  state.close=follow;
   showFloat(b.s);
 }
-function clearFlight(){run++;if(flyer)flyer.remove();}
+function clearFlight(){run++;curtain(false);satOn(false);if(flyer)flyer.remove();}
 function showFloat(shopId){
   const f=$('float');
   if(!shopId){f.hidden=true;return;}
@@ -282,7 +326,7 @@ function showFloat(shopId){
   f.onclick=()=>{
     state.close=!state.close;
     const s=SHOPS[shopId];
-    map.flyTo(state.close?{center:s.p,zoom:14.6,pitch:0,duration:2600,essential:true}:{center:s.p,zoom:globeZoom()+.35,duration:2200,essential:true});
+    map.flyTo(state.close?{center:s.p,zoom:CAM.shopZoom,pitch:CAM.pitch,bearing:CAM.turn,duration:2800,essential:true}:{center:s.p,zoom:globeZoom()+.35,pitch:0,bearing:0,duration:2600,essential:true});
     showFloat(shopId);
   };
 }
@@ -294,12 +338,12 @@ function refocus(){
     const s=SHOPS[state.shop];
     map.setPaintProperty('routes','line-opacity',.22);
     hl(routeFeatures().filter(f=>f.properties.shop===state.shop));
-    map.flyTo({center:s.p,zoom:globeZoom()+.2,duration:1500,essential:!calm});
+    map.flyTo({center:s.p,zoom:globeZoom()+.2,pitch:0,bearing:0,duration:1500,essential:!calm});
     showFloat(state.shop);
   }else{
     map.setPaintProperty('routes','line-opacity',.8);
     hl([]);showFloat(null);
-    map.flyTo({center:HOME,zoom:globeZoom(),duration:1500,essential:!calm});
+    map.flyTo({center:HOME,zoom:globeZoom(),pitch:0,bearing:0,duration:1500,essential:!calm});
   }
 }
 function pickShop(k){state.shop=k;state.bean=null;drawTabs();drawList();refocus();}
@@ -314,7 +358,7 @@ if(typeof mapboxgl==='undefined'){
   map=new mapboxgl.Map({container:'map',style:'mapbox://styles/mapbox/light-v11',center:HOME,zoom:1,projection:'globe',attributionControl:true});
   map.jumpTo({zoom:globeZoom()});
   map.on('style.load',()=>{addLayers();opening();});
-  map.on('error',e=>{const st=e.error&&e.error.status;if(st===401||st===403)fail('地図を読み込めません。MapboxのトークンのURL制限に、このページのアドレスを追加してください。');});
+  map.on('error',e=>{const st=e.error&&e.error.status;if((st===401||st===403)&&e.sourceId!=='sat')fail('地図を読み込めません。MapboxのトークンのURL制限に、このページのアドレスを追加してください。');});
   map.on('dragstart',()=>{follow=false;});
   map.on('click',e=>{
     if(!ready)return;
