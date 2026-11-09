@@ -38,6 +38,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 #tabs button[aria-pressed=true]{color:var(--ink);font-weight:700;border-color:var(--cherry)}
 #body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:76px}
 #add{position:absolute;right:16px;bottom:calc(14px + env(safe-area-inset-bottom));min-height:48px;padding:0 20px;border-radius:24px;background:var(--cherry);color:#fff;font-weight:700;font-size:15px;box-shadow:0 2px 6px rgba(42,27,20,.3)}
+#brewBtn{position:absolute;left:16px;bottom:calc(14px + env(safe-area-inset-bottom));min-height:48px;padding:0 24px;border-radius:24px;background:var(--ink);color:var(--sheet);font-weight:700;font-size:15px;box-shadow:0 2px 6px rgba(42,27,20,.3)}
 #sum{padding:10px 16px 2px;font-size:13px;color:var(--ink2);display:flex;justify-content:space-between;gap:12px;align-items:center}
 .link{font-size:13px;color:var(--ink);text-decoration:underline;text-underline-offset:3px;min-height:32px;white-space:nowrap}
 .sect{padding:16px 16px 2px;font:700 14px/1.4 var(--mincho)}
@@ -95,6 +96,33 @@ textarea{min-height:76px;resize:vertical}
 #pickBar b{font:700 17px/1.5 var(--mincho)}
 #tasteIn{display:block;width:100%;max-width:280px;margin:0 auto;touch-action:none}
 .photoPrev{display:block;width:120px;height:120px;object-fit:cover;border-radius:4px;margin-top:8px}
+/* 淹れる */
+#dial{display:block;width:230px;height:230px;margin:6px auto 0;touch-action:none;cursor:grab}
+.dialBtns{display:flex;justify-content:center;gap:10px;margin-top:6px}
+.dialBtns .btn{min-width:112px}
+.chg{color:var(--cherry);font-weight:700}
+.brewRow{display:block;width:100%;text-align:left;padding:8px 0;border-top:1px solid var(--line);font-size:13px;line-height:1.7}
+#timer{position:fixed;inset:0;z-index:20;background:var(--sea);color:#F0F1E2;display:flex;flex-direction:column;padding:calc(14px + env(safe-area-inset-top)) 20px calc(16px + env(safe-area-inset-bottom))}
+#timer .bean-name{font:700 16px/1.4 var(--mincho);opacity:.85}
+#timer .now{flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center;min-height:0}
+#timer .step{font:700 30px/1.3 var(--mincho)}
+#timer .goal{font-weight:700;font-size:64px;line-height:1.15;font-variant-numeric:tabular-nums}
+#timer .goal small{font-size:24px;margin-left:6px}
+#timer .pour{font-size:18px;opacity:.85}
+#timer .clock{font-size:42px;font-variant-numeric:tabular-nums;margin-top:14px}
+#timer .bar{height:8px;background:rgba(240,241,226,.22);border-radius:4px;margin:12px 0 0;overflow:hidden}
+#timer .bar i{display:block;height:100%;background:#CDB78F;border-radius:4px}
+#timer ol{list-style:none;margin:12px 0;padding:0;font-size:15px}
+#timer li{display:flex;justify-content:space-between;padding:4px 0;opacity:.55;font-variant-numeric:tabular-nums}
+#timer li.on{opacity:1;font-weight:700}
+#timer li.past{opacity:.3}
+#timer .ctl{display:flex;gap:8px}
+#timer .ctl button{flex:1;min-height:56px;border-radius:28px;border:1px solid #F0F1E2;font-size:16px;color:#F0F1E2}
+#timer .ctl button.go{background:#F0F1E2;color:var(--sea);font-weight:700}
+#timer .top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+#timer .top button{min-height:40px;color:#F0F1E2;font-size:14px}
+.stepRow{display:grid;grid-template-columns:1fr 72px 72px 32px;gap:6px;margin-top:6px;align-items:center}
+.stepRow button{min-height:44px;font-size:18px;color:var(--ink2)}
 @media (min-width:820px){
   #app{grid-template-rows:none;grid-template-columns:minmax(0,1fr) 400px}
   #sheet{border-top:0;border-left:1px solid var(--line)}
@@ -114,6 +142,7 @@ textarea{min-height:76px;resize:vertical}
   <section id="sheet">
     <div id="tabs"></div>
     <div id="body"></div>
+    <button id="brewBtn">淹れる</button>
     <button id="add">豆を記録する</button>
     <div id="pickBar" hidden></div>
   </section>
@@ -166,14 +195,15 @@ const HOME=[80,15],JAPAN=[139.4,35.65];
 
 /* ---------- 保存（端末の中のデータベース。同じアドレスのほかのアプリとは別の入れ物） ---------- */
 let idb=null;
-const D={shops:[],beans:[],buys:[]};
-function openDB(){return new Promise((ok,no)=>{const r=indexedDB.open('mamemiru',1);r.onupgradeneeded=()=>{for(const n of ['shops','beans','buys','photos'])r.result.createObjectStore(n,{keyPath:'id'});};r.onsuccess=()=>ok(idb=r.result);r.onerror=()=>no(r.error);});}
+const D={shops:[],beans:[],buys:[],tools:[],recipes:[],brews:[]};
+const STORES=['shops','beans','buys','tools','recipes','brews'];
+function openDB(){return new Promise((ok,no)=>{const r=indexedDB.open('mamemiru',2);r.onupgradeneeded=()=>{for(const n of ['shops','beans','buys','photos','tools','recipes','brews'])if(!r.result.objectStoreNames.contains(n))r.result.createObjectStore(n,{keyPath:'id'});};r.onsuccess=()=>ok(idb=r.result);r.onerror=()=>no(r.error);});}
 function tx(s,mode,fn){return new Promise((ok,no)=>{const t=idb.transaction(s,mode),st=t.objectStore(s);let out;const q=fn(st);if(q)q.onsuccess=()=>out=q.result;t.oncomplete=()=>ok(out);t.onerror=t.onabort=()=>no(t.error);});}
 const dbAll=s=>tx(s,'readonly',st=>st.getAll());
 const dbGet=(s,id)=>tx(s,'readonly',st=>st.get(id));
 const dbPut=(s,o)=>tx(s,'readwrite',st=>st.put(o));
 const dbDel=(s,id)=>tx(s,'readwrite',st=>st.delete(id));
-async function dbLoad(){for(const n of ['shops','beans','buys'])D[n]=await dbAll(n);}
+async function dbLoad(){for(const n of STORES)D[n]=await dbAll(n);}
 async function save(store,o){
   const i=D[store].findIndex(x=>x.id===o.id);i<0?D[store].push(o):D[store][i]=o;
   await dbPut(store,o);
@@ -207,7 +237,7 @@ function backupNudge(){
   return Date.now()-last>30*864e5?'<button class="link" data-more="1">バックアップしましょう</button>':'';
 }
 function drawList(){
-  state.buy=null;$('add').hidden=false;
+  state.buy=null;$('add').hidden=false;$('brewBtn').hidden=false;
   state.shop?drawFront():drawAll();
   $('body').scrollTop=0;
   $('body').querySelectorAll('[data-more]').forEach(b=>b.onclick=openMore);
@@ -263,23 +293,26 @@ function radar(mine,theirs){
 }
 async function drawDetail(b){
   const be=beanOf(b.bean)||{},s=shopOf(b.shop),o=be.origin;
-  $('add').hidden=true;
+  $('add').hidden=true;$('brewBtn').hidden=true;
   const rows=[['産地',originText(o)],['精製',be.proc],['お店',s&&s.name],[b.bought?'買った日':'見かけた日',jd(b.date)],['値段',b.price?`${yen(b.price)}${b.grams?`（${b.grams}g）`:''}`:''],['焙煎日',jd(b.roastDate)],['次回',againText(b.again)]].filter(r=>r[1]);
   const others=D.buys.filter(x=>x.bean===b.bean&&x.bought).sort(byDate);
-  const hasChart=b.taste||b.shopTaste;
+  const myTaste=tasteOf(b),hasChart=myTaste||b.shopTaste;
   $('body').innerHTML=`<div id="detail">
     <button class="back" id="back">一覧に戻す</button>
     <h2>${esc(be.name)}</h2>
-    <div class="${hasChart?'two':''}"><dl>${rows.map(r=>`<dt>${r[0]}</dt><dd class="${r[0]==='次回'&&b.again===2?'again':''}">${esc(r[1])}</dd>`).join('')}</dl>${hasChart?`<div>${radar(b.taste,b.shopTaste)}</div>`:''}</div>
+    <div class="${hasChart?'two':''}"><dl>${rows.map(r=>`<dt>${r[0]}</dt><dd class="${r[0]==='次回'&&b.again===2?'again':''}">${esc(r[1])}</dd>`).join('')}</dl>${hasChart?`<div>${radar(myTaste,b.shopTaste)}</div>`:''}</div>
     ${be.roast!=null?`<div class="roast" aria-hidden="true">${ROAST_C.map((c,i)=>`<span class="${i===be.roast?'on':''}" style="background:${c}"></span>`).join('')}</div><small>焙煎度 ${ROAST[be.roast]}</small>`:''}
     ${b.memo?`<p class="memo">${esc(b.memo)}</p>`:''}
     ${b.shopMemo?`<div class="label">お店の説明</div><p class="memo" style="margin-top:2px">${esc(b.shopMemo)}</p>`:''}
     <div id="ph"></div>
     <div class="acts">
-      <button class="btn main" id="edit">${b.bought&&b.again==null?'味と感想を書く':'編集する'}</button>
+      ${b.bought&&!b.done?'<button class="btn main" id="brewThis">この豆で淹れる</button>':''}
+      <button class="btn" id="edit">${b.bought&&b.again==null?'味と感想を書く':'編集する'}</button>
       <button class="btn" id="rebuy">${b.bought?'また買った':'買った'}</button>
       ${b.bought&&lineOf(b)?'<button class="btn" id="fly">飛ばす</button>':''}
+      ${b.bought?`<button class="btn" id="done">${b.done?'飲み切りを取り消す':'飲み切った'}</button>`:''}
     </div>
+    ${brewHistory(b)}
     ${others.length>1?`<div class="hist"><div class="label" style="border:0;padding:0;margin-bottom:4px">この豆の記録</div>${others.map(x=>`<div><span>${jd(x.date)}　${esc((shopOf(x.shop)||{}).name||'')}</span><span>${x.price?yen(x.price):''}</span></div>`).join('')}</div>`:''}
   </div>`;
   $('body').scrollTop=0;
@@ -287,6 +320,9 @@ async function drawDetail(b){
   $('edit').onclick=()=>openForm({buy:b});
   $('rebuy').onclick=()=>openForm(b.bought?{from:b}:{promote:b});
   if($('fly'))$('fly').onclick=()=>flight(b);
+  if($('brewThis'))$('brewThis').onclick=()=>openBrew(b.id);
+  if($('done'))$('done').onclick=async()=>{await save('buys',{...b,done:!b.done});drawDetail(buyOf(b.id));};
+  $('body').querySelectorAll('[data-brew]').forEach(r=>r.onclick=()=>openBrewView(r.dataset.brew));
   if(b.photo){const ph=await dbGet('photos',b.photo).catch(()=>null);if(ph&&state.buy===b.id&&$('ph'))$('ph').innerHTML=`<img class="thumb" alt="袋の写真" src="${ph.data}">`;}
 }
 
@@ -312,19 +348,18 @@ function tint(){
     }
   }
 }
-const hl=fs=>map.getSource('hl').setData(fc(fs));
+const hlTrim=v=>{map.setPaintProperty('hl','line-trim-offset',v);map.setPaintProperty('hl-case','line-trim-offset',v);};
+const hl=fs=>{hlTrim([0,0]);map.getSource('hl').setData(fc(fs));};
 function opening(){
-  const all=routeFeatures();
-  if(calm){map.getSource('routes').setData(fc(all));return;}
-  const my=++run,t0=performance.now(),D=2600;
+  map.getSource('routes').setData(fc(routeFeatures()));
+  if(calm)return;
+  const my=++run,t0=performance.now(),D=2000,trim=v=>map.setPaintProperty('routes','line-trim-offset',v);
+  trim([0,1]);
   (function tick(now){
-    if(my!==run){map.getSource('routes').setData(fc(all));return;}
-    const p=Math.min(1,(now-t0)/D);
-    map.getSource('routes').setData(fc(all.map((f,i)=>{
-      const lag=i/all.length*.45,q=Math.max(0,Math.min(1,(p-lag)/.55)),c=f.geometry.coordinates,e=Math.max(2,Math.ceil(c.length*q));
-      return lineF(c.slice(0,e),f.properties);
-    })));
-    if(p<1)requestAnimationFrame(tick);
+    const p=Math.max(0,Math.min(1,(now-t0)/D));
+    if(my!==run||p>=1)return trim([0,0]);
+    trim([Math.max(.0001,1-(1-p)**2),1]);
+    requestAnimationFrame(tick);
   })(t0);
 }
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -339,7 +374,7 @@ const bothEnds=(t,e)=>t<e?t*t/(2*e*(1-e)):t<1-e?(t-e/2)/(1-e):1-(1-t)**2/(2*e*(1
 /* 農園からの引きは速く始まって減速し、店への寄りはゆっくり始まって加速する */
 const flightTime=t=>{const s=bothEnds(t,.04);return s+CAM.swing*Math.sin(2*Math.PI*s)/(2*Math.PI);};
 /* カメラの設計：画面に見える幅を「出発点や到着点からの距離」に比例させる。豆は画面上でほぼ一定の速さに見える */
-const CAM={farmZoom:12.8,shopZoom:15.8,pitch:55,turn:16,slope:1.6,duration:9500,approach:4200,hold:500,globe:.3,swing:.7};
+const CAM={farmZoom:12.8,shopZoom:15.8,pitch:55,turn:16,slope:1.6,duration:6800,approach:2800,hold:250,globe:.3,swing:.7};
 function cameraPlan(c){
   let S=0;for(let i=0;i<c.length-1;i++)S+=gcKm(c[i],c[i+1]);
   const zg=globeZoom(),wg=12000,w0=wg/2**(CAM.farmZoom-zg),ws=wg/2**(CAM.shopZoom-zg);
@@ -398,16 +433,20 @@ async function flight(b){
   })(t1);});
   if(my!==run)return;
   /* 写真が届くまで、農園で少しだけ止まる */
-  if(follow){await sleep(CAM.hold);await idle(1400);if(my!==run)return;}
+  if(follow){await sleep(CAM.hold);await idle(700);if(my!==run)return;}
   const t0=performance.now();
   const lastI=c.length-1,step=plan.S/lastI;
+  /* 線は先に丸ごと渡し、見える長さだけを毎コマ変える（線を作り直さないので軽い） */
+  const mercY=la=>Math.log(Math.tan(Math.PI/4+la*D2R/2))/(2*Math.PI),cm=[0];
+  for(let i=1;i<=lastI;i++)cm.push(cm[i-1]+Math.hypot((c[i][0]-c[i-1][0])/360,mercY(c[i][1])-mercY(c[i-1][1])));
+  hl([lineF(c)]);hlTrim([0,1]);
   let satGone=false;
   await new Promise(res=>{(function tick(now){
     if(my!==run)return res();
     const p=Math.max(0,Math.min(1,(now-t0)/CAM.duration)),{x,zoom}=plan.at(flightTime(p));
     const f=Math.min(lastI,x/step),i=Math.min(lastI-1,Math.floor(f)),u=f-i;
     const pos=[c[i][0]+(c[i+1][0]-c[i][0])*u,c[i][1]+(c[i+1][1]-c[i][1])*u];
-    hl([lineF([...c.slice(0,i+1),pos])]);
+    hlTrim([Math.max(.00001,Math.min(.99999,(cm[i]+(cm[i+1]-cm[i])*u)/cm[lastI])),1]);
     m.setLngLat(pos);
     const k=near(zoom),first=x<plan.S/2;
     if(follow)map.jumpTo({center:pos,zoom,pitch:CAM.pitch*k,bearing:(first?-CAM.turn:CAM.turn)*k});
@@ -458,9 +497,9 @@ function addLayers(){
   tint();
   map.addSource('sat',{type:'raster',url:'mapbox://mapbox.satellite',tileSize:256});
   map.addLayer({id:'sat',type:'raster',source:'sat',minzoom:4,layout:{visibility:'none'},paint:{'raster-opacity':0,'raster-fade-duration':0}});
-  map.addSource('routes',{type:'geojson',data:fc([])});
+  map.addSource('routes',{type:'geojson',lineMetrics:true,data:fc([])});
   map.addLayer({id:'routes',type:'line',source:'routes',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':C.cherry,'line-width':['interpolate',['linear'],['get','n'],1,1.4,3,3],'line-opacity':.8}});
-  map.addSource('hl',{type:'geojson',data:fc([])});
+  map.addSource('hl',{type:'geojson',lineMetrics:true,data:fc([])});
   map.addLayer({id:'hl-case',type:'line',source:'hl',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':C.sheet,'line-width':5.5,'line-opacity':.9}});
   map.addLayer({id:'hl',type:'line',source:'hl',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':C.cherry,'line-width':3}});
   map.addSource('origins',{type:'geojson',data:fc([])});
@@ -622,43 +661,12 @@ function openForm({buy,from,promote}){
   const gDraw=()=>chips('fG',GRAMS.map(g=>[g,g+'g']),()=>+$('fGrams').value,v=>{$('fGrams').value=v;gDraw();});
   $('fGrams').oninput=gDraw;
   const againDraw=()=>chips('fAgain',[[2,'また買う'],[1,'どちらでも'],[0,'もう買わない']],()=>d.again,v=>{d.again=d.again===v?null:v;againDraw();});
-  /* 味のチャート入力：指を置いた方向の軸を、中心からの距離で 1〜5 に合わせる */
   const tasteDraw=()=>{
     chips('fTasteTab',[['mine','自分'],['shop','お店の説明']],()=>tasteTab,v=>{tasteTab=v;tasteDraw();});
-    const key=tasteTab==='mine'?'taste':'shopTaste',cx=120,cy=108,R=76;
-    const pt=(i,v)=>{const a=-Math.PI/2+i*2*Math.PI/5,r=R*v/5;return [cx+r*Math.cos(a),cy+r*Math.sin(a)];};
-    const poly=vals=>vals.map((v,i)=>pt(i,v).map(x=>x.toFixed(1)).join(',')).join(' ');
-    const paint=()=>{
-      const v=d[key],ghost=tasteTab==='mine'?d.shopTaste:null,shape=v||[3,3,3,3,3];
-      let s=`<svg id="tasteIn" viewBox="0 0 240 216" role="img" aria-label="味のチャートの入力">`;
-      [1,2,3,4,5].forEach(n=>s+=`<polygon points="${poly(Array(5).fill(n))}" fill="none" stroke="#C4C8A8" stroke-width="${n===5?1:.75}"/>`);
-      for(let i=0;i<5;i++){const[x,y]=pt(i,5);s+=`<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#C4C8A8" stroke-width=".75"/>`;}
-      if(ghost)s+=`<polygon points="${poly(ghost)}" fill="none" stroke="#2A1B14" stroke-width="1.5" stroke-dasharray="4 3"/>`;
-      s+=`<polygon points="${poly(shape)}" fill="#B3173F" fill-opacity="${v?.18:.06}" stroke="#B3173F" stroke-opacity="${v?1:.35}" stroke-width="2" stroke-linejoin="round"/>`;
-      shape.forEach((n,i)=>{const[x,y]=pt(i,n);s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="6.5" fill="#B3173F" fill-opacity="${v?1:.35}" stroke="#F0F1E2" stroke-width="2"/>`;});
-      AXES.forEach((a,i)=>{const[x,y]=pt(i,6.15);s+=`<text x="${x.toFixed(1)}" y="${(y+4).toFixed(1)}" text-anchor="middle">${a}${v?' '+v[i]:''}</text>`;});
-      $('fTaste').innerHTML=s+'</svg>';
-      $('fTasteClear').hidden=!v;
-      $('tasteIn').addEventListener('pointerdown',down);
-    };
-    /* 描き直すと要素が入れ替わるので、指の位置は毎回いまの要素で測る */
-    const hit=(e,fixed)=>{
-      const r=$('tasteIn').getBoundingClientRect(),k=240/r.width,x=(e.clientX-r.left)*k-cx,y=(e.clientY-r.top)*k-cy;
-      let axis=fixed;
-      if(axis==null){let a=Math.atan2(y,x)+Math.PI/2;if(a<0)a+=2*Math.PI;axis=Math.round(a/(2*Math.PI/5))%5;}
-      const ang=-Math.PI/2+axis*2*Math.PI/5,along=x*Math.cos(ang)+y*Math.sin(ang);
-      if(!d[key])d[key]=tasteTab==='mine'&&d.shopTaste?[...d.shopTaste]:[3,3,3,3,3];
-      d[key][axis]=Math.max(1,Math.min(5,Math.round(along/R*5)));
-      return axis;
-    };
-    const down=e=>{
-      e.preventDefault();
-      const ax=hit(e,null);paint();
-      const move=m=>{m.preventDefault();hit(m,ax);paint();};
-      const up=()=>{removeEventListener('pointermove',move);removeEventListener('pointerup',up);removeEventListener('pointercancel',up);};
-      addEventListener('pointermove',move,{passive:false});addEventListener('pointerup',up);addEventListener('pointercancel',up);
-    };
-    paint();
+    const key=tasteTab==='mine'?'taste':'shopTaste';
+    const showClear=()=>{$('fTasteClear').hidden=!d[key];};
+    tasteInput($('fTaste'),()=>d[key],v=>{d[key]=v;showClear();},tasteTab==='mine'?d.shopTaste:null);
+    showClear();
     $('fTasteClear').onclick=()=>{d[key]=null;tasteDraw();};
   };
   const photoDraw=async()=>{
@@ -715,14 +723,14 @@ function openMore(){
   const last=+kv('lastBackup')||0;
   L.innerHTML=`<div class="over"><header><h2>バックアップ</h2><button id="mClose">閉じる</button></header><div class="scroll">
     <p>記録はこの端末の中だけに保存されています。ブラウザの「Cookieとサイトデータ」を消すと、記録も消えます。ときどき書き出して、Googleドライブなどに置いておくと安心です。</p>
-    <p>今の記録：お店 ${D.shops.length}軒、豆 ${D.beans.length}種類、購入 ${D.buys.length}件<br>最後の書き出し：${last?jd(new Date(last).toISOString().slice(0,10)):'まだありません'}</p>
+    <p>今の記録：お店 ${D.shops.length}軒、豆 ${D.beans.length}種類、購入 ${D.buys.length}件、抽出 ${D.brews.length}杯<br>最後の書き出し：${last?jd(new Date(last).toISOString().slice(0,10)):'まだありません'}</p>
     <div class="acts"><button class="btn main" id="mOut">書き出す</button><button class="btn" id="mIn">書き出したファイルから戻す</button><input type="file" id="mFile" accept=".json,application/json" hidden></div>
     <div class="err" id="mErr" hidden style="margin-top:12px"></div><div id="mMsg" style="margin-top:12px"></div>
   </div></div>`;
   $('mClose').onclick=()=>{L.innerHTML='';};
   $('mOut').onclick=async()=>{
     const photos=await dbAll('photos');
-    const data={app:'mamemiru',version:1,exportedAt:new Date().toISOString(),shops:D.shops,beans:D.beans,buys:D.buys,photos};
+    const data={app:'mamemiru',version:2,exportedAt:new Date().toISOString(),...Object.fromEntries(STORES.map(s=>[s,D[s]])),photos};
     const url=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'}));
     const a=document.createElement('a');a.href=url;a.download=`mamemiru-${today()}.json`;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);
     kv('lastBackup',String(Date.now()));
@@ -738,18 +746,302 @@ function openMore(){
     $('mErr').hidden=true;
     $('mMsg').innerHTML=`<p>今の記録を消して、このファイルの内容（購入 ${data.buys.length}件）に置き換えます。</p><button class="btn main" id="mDo">置き換える</button>`;
     $('mDo').onclick=async()=>{
-      for(const s of ['shops','beans','buys','photos']){await clearStore(s);for(const o of data[s]||[])await dbPut(s,o);}
+      for(const s of [...STORES,'photos']){await clearStore(s);for(const o of data[s]||[])await dbPut(s,o);}
       await dbLoad();state.buy=null;state.shop=null;L.innerHTML='';renderAll();refocus();
     };
   };
 }
 function drawListIfVisible(){if(!state.buy)drawList();}
 
+/* ---------- 味のチャートの入力（指を置いた方向の軸を、中心からの距離で 1〜5 に合わせる） ---------- */
+function tasteInput(el,get,set,ghost){
+  const cx=120,cy=108,R=76;
+  const pt=(i,v)=>{const a=-Math.PI/2+i*2*Math.PI/5,r=R*v/5;return [cx+r*Math.cos(a),cy+r*Math.sin(a)];};
+  const poly=vals=>vals.map((v,i)=>pt(i,v).map(x=>x.toFixed(1)).join(',')).join(' ');
+  const paint=()=>{
+    const v=get(),shape=v||[3,3,3,3,3];
+    let s=`<svg id="tasteIn" viewBox="0 0 240 216" role="img" aria-label="味のチャートの入力">`;
+    [1,2,3,4,5].forEach(n=>s+=`<polygon points="${poly(Array(5).fill(n))}" fill="none" stroke="#C4C8A8" stroke-width="${n===5?1:.75}"/>`);
+    for(let i=0;i<5;i++){const[x,y]=pt(i,5);s+=`<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#C4C8A8" stroke-width=".75"/>`;}
+    if(ghost)s+=`<polygon points="${poly(ghost)}" fill="none" stroke="#2A1B14" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+    s+=`<polygon points="${poly(shape)}" fill="#B3173F" fill-opacity="${v?.18:.06}" stroke="#B3173F" stroke-opacity="${v?1:.35}" stroke-width="2" stroke-linejoin="round"/>`;
+    shape.forEach((n,i)=>{const[x,y]=pt(i,n);s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="6.5" fill="#B3173F" fill-opacity="${v?1:.35}" stroke="#F0F1E2" stroke-width="2"/>`;});
+    AXES.forEach((a,i)=>{const[x,y]=pt(i,6.15);s+=`<text x="${x.toFixed(1)}" y="${(y+4).toFixed(1)}" text-anchor="middle">${a}${v?' '+v[i]:''}</text>`;});
+    el.innerHTML=s+'</svg>';
+    el.querySelector('svg').addEventListener('pointerdown',down);
+  };
+  /* 描き直すと要素が入れ替わるので、指の位置は毎回いまの要素で測る */
+  const hit=(e,fixed)=>{
+    const r=el.querySelector('svg').getBoundingClientRect(),k=240/r.width,x=(e.clientX-r.left)*k-cx,y=(e.clientY-r.top)*k-cy;
+    let axis=fixed;
+    if(axis==null){let a=Math.atan2(y,x)+Math.PI/2;if(a<0)a+=2*Math.PI;axis=Math.round(a/(2*Math.PI/5))%5;}
+    const ang=-Math.PI/2+axis*2*Math.PI/5,along=x*Math.cos(ang)+y*Math.sin(ang);
+    const v=get()?[...get()]:(ghost?[...ghost]:[3,3,3,3,3]);
+    v[axis]=Math.max(1,Math.min(5,Math.round(along/R*5)));
+    set(v);
+    return axis;
+  };
+  const down=e=>{
+    e.preventDefault();
+    const ax=hit(e,null);paint();
+    const move=m=>{m.preventDefault();hit(m,ax);paint();};
+    const up=()=>{removeEventListener('pointermove',move);removeEventListener('pointerup',up);removeEventListener('pointercancel',up);};
+    addEventListener('pointermove',move,{passive:false});addEventListener('pointerup',up);addEventListener('pointercancel',up);
+  };
+  paint();
+}
+
+/* ---------- 淹れる ---------- */
+const RATE=['いまいち','ふつう','おいしい'];
+const brewsOf=beanId=>D.brews.filter(x=>beanOf(buyOf(x.buy)?.bean)?.id===beanId).sort((a,b)=>b.at-a.at);
+const mmss=s=>{s=Math.max(0,Math.round(s));return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;};
+const toolsOf=k=>D.tools.filter(t=>t.kind===k).sort((a,b)=>a.at-b.at);
+const grindText=(c,m)=>{const per=(m&&m.per)||10;return `${Math.floor(c/per)}.${c%per}`;};
+function tasteOf(b){
+  if(b.taste)return b.taste;
+  const t=brewsOf(b.bean).filter(x=>x.buy===b.id&&x.taste);
+  return t.length?AXES.map((_,i)=>Math.round(t.reduce((s,x)=>s+x.taste[i],0)/t.length)):null;
+}
+function brewHistory(b){
+  const list=brewsOf(b.bean);
+  if(!list.length)return '';
+  const row=(x,prev)=>{
+    const m=D.tools.find(t=>t.id===x.mill),rec=D.recipes.find(r=>r.id===x.recipe),drip=D.tools.find(t=>t.id===x.dripper);
+    const part=(key,text)=>prev&&prev[key]!==x[key]?`<span class="chg">${esc(text)}</span>`:esc(text);
+    return `<button class="brewRow" data-brew="${x.id}"><b>${jd(x.date)}</b>　${x.rating!=null?RATE[x.rating]:''}<br>挽き目 ${part('grind',grindText(x.grind,m))}　${part('temp',x.temp+'℃')}　豆${part('dose',x.dose+'g')}　湯${part('water',x.water+'g')}　${mmss(x.secs)}${rec?`<br>${part('recipe',rec.name)}`:''}${drip?`　${part('dripper',drip.name)}`:''}</button>`;
+  };
+  return `<div class="hist"><div class="label" style="border:0;padding:0;margin-bottom:4px">この豆の抽出（前回から変えたところは赤い太字）</div>${list.map((x,i)=>row(x,list[i+1])).join('')}</div>`;
+}
+async function brewDefaults(){
+  if(!toolsOf('mill').length)await save('tools',{id:uid(),at:Date.now(),kind:'mill',name:'タイムモア',bought:'2025-06-01',nums:9,per:10});
+  if(!D.recipes.length)await save('recipes',{id:uid(),at:Date.now(),name:'基本のドリップ',dose:15,water:225,temp:90,steps:[{label:'蒸らし',sec:40,to:30},{label:'1投目',sec:35,to:100},{label:'2投目',sec:35,to:160},{label:'3投目',sec:40,to:225},{label:'落ちきるまで',sec:30,to:225}]});
+}
+function openBrew(buyId){
+  brewDefaults().then(()=>brewSetup(buyId)).catch(()=>fail('道具の準備を保存できませんでした。端末の空き容量を確認してください。'));
+}
+function brewSetup(buyId,keep){
+  const L=$('layer1');
+  const open=bought().filter(b=>!b.done);
+  if(!open.length){
+    L.innerHTML=`<div class="over"><header><h2>淹れる</h2><button id="bClose">閉じる</button></header><div class="scroll"><div class="empty"><b>淹れる豆がありません</b>先に買った豆を記録してください。飲み切りにした豆は、ここには出ません。</div></div></div>`;
+    $('bClose').onclick=()=>{L.innerHTML='';};return;
+  }
+  const lastBrew=[...D.brews].sort((a,b)=>b.at-a.at)[0];
+  const firstBuy=buyId||(lastBrew&&open.some(b=>b.id===lastBrew.buy)?lastBrew.buy:open[0].id);
+  const d=keep||{buy:firstBuy};
+  /* 同じ豆の前回があればそれを、なければ直近の一杯を引き継ぐ */
+  const inherit=()=>{
+    const be=buyOf(d.buy).bean,base=brewsOf(be)[0]||lastBrew;
+    const rec=(base&&D.recipes.find(r=>r.id===base.recipe))||D.recipes[0];
+    d.recipe=rec.id;d.mill=(base&&D.tools.some(t=>t.id===base.mill)&&base.mill)||toolsOf('mill')[0].id;
+    d.dripper=(base&&D.tools.some(t=>t.id===base.dripper)&&base.dripper)||(toolsOf('dripper')[0]||{}).id||null;
+    d.grind=base?base.grind:24;d.dose=base?base.dose:rec.dose;d.water=base?base.water:rec.water;d.temp=base?base.temp:rec.temp;
+  };
+  if(!keep)inherit();
+  const mill=()=>D.tools.find(t=>t.id===d.mill);
+  const total=()=>{const m=mill();return m.nums*m.per;};
+  L.innerHTML=`<div class="over"><header><h2>淹れる</h2><button id="bClose">閉じる</button></header>
+  <div class="scroll">
+    <div class="field"><label for="bBean">豆</label><select id="bBean">${open.map(b=>`<option value="${b.id}">${esc((beanOf(b.bean)||{}).name)}（${jd(b.date)}）</option>`).join('')}</select></div>
+    <div class="field"><span class="t">淹れ方</span><div class="chips" id="bRec"></div><div style="margin-top:4px"><button class="link" id="bRecEdit">この淹れ方を編集</button></div></div>
+    <div class="field"><span class="t">ミル</span><div class="chips" id="bMill"></div>
+      <svg id="dial" viewBox="0 0 260 260" role="slider" aria-label="挽き目" tabindex="0"></svg>
+      <div class="dialBtns"><button class="btn" id="bFine">1クリック細かく</button><button class="btn" id="bCoarse">1クリック粗く</button></div>
+      <div class="help" id="bMillNote" style="text-align:center"></div>
+      <div style="text-align:center"><button class="link" id="bMillEdit">ミルの設定</button></div></div>
+    <div class="field"><span class="t">ドリッパー</span><div class="chips" id="bDrip"></div></div>
+    <div class="field half"><div><label for="bDose">豆（g）</label><input type="number" inputmode="decimal" id="bDose" value="${esc(d.dose)}"></div><div><label for="bWater">お湯（g）</label><input type="number" inputmode="decimal" id="bWater" value="${esc(d.water)}"></div></div>
+    <div class="field"><label for="bTemp">湯温（℃）</label><input type="number" inputmode="numeric" id="bTemp" value="${esc(d.temp)}"></div>
+    <div class="help" id="bRatio"></div>
+  </div><footer><div class="err" id="bErr" hidden></div><button class="btn main" id="bStart">スタート</button></footer></div>`;
+  const redraw=()=>{Object.assign(d,readNums());brewSetup(d.buy,d);};
+  const readNums=()=>({dose:+$('bDose').value||0,water:+$('bWater').value||0,temp:+$('bTemp').value||0});
+  $('bClose').onclick=()=>{L.innerHTML='';};
+  $('bBean').value=d.buy;
+  $('bBean').onchange=()=>{d.buy=$('bBean').value;inherit();brewSetup(d.buy,d);};
+  const chipRow=(id,items,cur,pick,add)=>{
+    const el=$(id);
+    el.innerHTML=items.map(t=>`<button type="button" class="chip" aria-pressed="${cur===t.id}" data-id="${t.id}">${esc(t.name)}</button>`).join('')+(add?`<button type="button" class="chip" data-add="1">追加</button>`:'');
+    el.querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>pick(b.dataset.id));
+    if(add)el.querySelector('[data-add]').onclick=add;
+  };
+  chipRow('bRec',[...D.recipes].sort((a,b)=>a.at-b.at),d.recipe,id=>{const r=D.recipes.find(x=>x.id===id);d.recipe=id;d.dose=r.dose;d.water=r.water;d.temp=r.temp;brewSetup(d.buy,d);},()=>openRecipe(null,r=>{Object.assign(d,readNums(),{recipe:r.id,dose:r.dose,water:r.water,temp:r.temp});brewSetup(d.buy,d);}));
+  $('bRecEdit').onclick=()=>openRecipe(D.recipes.find(r=>r.id===d.recipe),r=>{Object.assign(d,{dose:r.dose,water:r.water,temp:r.temp,recipe:r?r.id:null});if(!D.recipes.some(x=>x.id===d.recipe))d.recipe=D.recipes[0]?.id;brewDefaults().then(()=>{if(!d.recipe)d.recipe=D.recipes[0].id;brewSetup(d.buy,d);});});
+  chipRow('bMill',toolsOf('mill'),d.mill,id=>{Object.assign(d,readNums(),{mill:id});brewSetup(d.buy,d);},()=>openTool('mill',null,t=>{Object.assign(d,readNums(),{mill:t.id});brewSetup(d.buy,d);}));
+  $('bMillEdit').onclick=()=>openTool('mill',mill(),()=>{Object.assign(d,readNums());if(!D.tools.some(t=>t.id===d.mill))d.mill=toolsOf('mill')[0]?.id;brewDefaults().then(()=>{if(!d.mill)d.mill=toolsOf('mill')[0].id;brewSetup(d.buy,d);});});
+  chipRow('bDrip',toolsOf('dripper'),d.dripper,id=>{Object.assign(d,readNums(),{dripper:d.dripper===id?null:id});brewSetup(d.buy,d);},()=>openTool('dripper',null,t=>{Object.assign(d,readNums(),{dripper:t.id});brewSetup(d.buy,d);}));
+  /* ミルのダイヤル：外周の目盛りが回り、赤い印の位置を読む */
+  const m=mill(),T=total(),deg=360/T,dial=$('dial');
+  d.grind=Math.max(0,Math.min(T,d.grind));
+  let ticks='';
+  for(let i=0;i<T;i++){const major=i%m.per===0;ticks+=`<line x1="130" y1="${major?22:26}" x2="130" y2="40" stroke="#2A1B14" stroke-width="${major?2.4:1}" transform="rotate(${(i*deg).toFixed(3)} 130 130)"/>`;}
+  for(let n=0;n<m.nums;n++){ticks+=`<text x="130" y="60" text-anchor="middle" style="font-size:15px;font-weight:700" transform="rotate(${(n*m.per*deg).toFixed(3)} 130 130)">${n}</text>`;}
+  dial.innerHTML=`<circle cx="130" cy="130" r="120" fill="#E4E6CF"/><circle cx="130" cy="130" r="74" fill="#F0F1E2"/><g id="dialRing">${ticks}</g><path d="M130 16l-8-13h16z" fill="#B3173F"/><text id="dialNum" x="130" y="146" text-anchor="middle" style="font-family:var(--mincho);font-size:50px;font-weight:700"></text>`;
+  const show=()=>{
+    $('dialRing').setAttribute('transform',`rotate(${(-d.grind*deg).toFixed(3)} 130 130)`);
+    $('dialNum').textContent=grindText(d.grind,m);
+    dial.setAttribute('aria-valuenow',d.grind);dial.setAttribute('aria-valuetext',grindText(d.grind,m));
+  };
+  const setG=v=>{v=Math.max(0,Math.min(T,v));if(v===d.grind)return;d.grind=v;if(navigator.vibrate)navigator.vibrate(6);show();};
+  show();
+  $('bFine').onclick=()=>setG(d.grind-1);$('bCoarse').onclick=()=>setG(d.grind+1);
+  dial.onkeydown=e=>{if(e.key==='ArrowLeft'||e.key==='ArrowDown'){e.preventDefault();setG(d.grind-1);}if(e.key==='ArrowRight'||e.key==='ArrowUp'){e.preventDefault();setG(d.grind+1);}};
+  const angle=e=>{const r=dial.getBoundingClientRect();return Math.atan2(e.clientY-(r.top+r.height/2),e.clientX-(r.left+r.width/2))*180/Math.PI;};
+  dial.onpointerdown=e=>{
+    e.preventDefault();let last=angle(e),acc=0;
+    const mv=x=>{x.preventDefault();const a=angle(x);let da=a-last;if(da>180)da-=360;if(da<-180)da+=360;last=a;acc-=da/deg;const st=acc>0?Math.floor(acc):Math.ceil(acc);if(st){acc-=st;setG(d.grind+st);}};
+    const up=()=>{removeEventListener('pointermove',mv);removeEventListener('pointerup',up);removeEventListener('pointercancel',up);};
+    addEventListener('pointermove',mv,{passive:false});addEventListener('pointerup',up);addEventListener('pointercancel',up);
+  };
+  const ground=D.brews.filter(x=>x.mill===m.id).reduce((s,x)=>s+(x.dose||0),0);
+  $('bMillNote').textContent=`${m.bought?jd(m.bought).replace(/\d+日$/,'')+'から　':''}${ground>=1000?(ground/1000).toFixed(1)+'kg':ground+'g'}挽きました`;
+  const ratio=()=>{const n=readNums();$('bRatio').textContent=n.dose&&n.water?`豆1に対してお湯 ${(n.water/n.dose).toFixed(1)}`:'';};
+  ratio();['bDose','bWater'].forEach(i=>$(i).oninput=ratio);
+  $('bStart').onclick=()=>{
+    Object.assign(d,readNums());
+    if(!d.dose||!d.water){$('bErr').hidden=false;$('bErr').textContent='豆とお湯の量を入れてください。';return;}
+    L.innerHTML='';runTimer(d);
+  };
+}
+function openTool(kind,tool,done){
+  const L=$('layer2'),isMill=kind==='mill',used=tool&&D.brews.some(x=>x.mill===tool.id||x.dripper===tool.id);
+  L.innerHTML=`<div class="over"><header><h2>${tool?'設定':isMill?'ミルを追加':'ドリッパーを追加'}</h2><button id="tClose">閉じる</button></header><div class="scroll">
+    <div class="field"><label for="tName">名前</label><input type="text" id="tName" value="${esc(tool?tool.name:'')}"></div>
+    ${isMill?`<div class="field half"><div><label for="tNums">目盛りの数字の数</label><input type="number" inputmode="numeric" id="tNums" value="${esc(tool?tool.nums:9)}"></div><div><label for="tPer">数字の間のクリック数</label><input type="number" inputmode="numeric" id="tPer" value="${esc(tool?tool.per:10)}"></div></div>
+    <div class="field"><label for="tBought">買った日</label><input type="date" id="tBought" value="${esc(tool?tool.bought||'':'')}"></div>`:''}
+    ${tool&&!used?'<div class="field"><button class="btn" id="tDel">この道具を消す</button></div>':''}
+  </div><footer><div class="err" id="tErr" hidden></div><button class="btn main" id="tSave">保存する</button></footer></div>`;
+  const close=()=>{L.innerHTML='';};
+  $('tClose').onclick=close;
+  $('tSave').onclick=async()=>{
+    const name=$('tName').value.trim();
+    if(!name){$('tErr').hidden=false;$('tErr').textContent='名前を入れてください。';return;}
+    const o={id:tool?tool.id:uid(),at:tool?tool.at:Date.now(),kind,name};
+    if(isMill)Object.assign(o,{nums:Math.max(1,+$('tNums').value||9),per:Math.max(1,+$('tPer').value||10),bought:$('tBought').value||''});
+    await save('tools',o);close();done&&done(o);
+  };
+  if($('tDel')){let armed=false;$('tDel').onclick=async()=>{if(!armed){armed=true;$('tDel').textContent='もう一度押すと消します';return;}await remove('tools',tool.id);close();done&&done(tool);};}
+}
+function openRecipe(rec,done){
+  const L=$('layer2'),used=rec&&D.brews.some(x=>x.recipe===rec.id);
+  const steps=rec?rec.steps.map(s=>({...s})):[{label:'蒸らし',sec:40,to:30},{label:'注ぐ',sec:90,to:225}];
+  L.innerHTML=`<div class="over"><header><h2>${rec?'淹れ方を編集':'淹れ方を追加'}</h2><button id="rClose">閉じる</button></header><div class="scroll">
+    <div class="field"><label for="rName">名前</label><input type="text" id="rName" value="${esc(rec?rec.name:'')}"></div>
+    <div class="field half"><div><label for="rDose">豆（g）</label><input type="number" inputmode="decimal" id="rDose" value="${esc(rec?rec.dose:15)}"></div><div><label for="rWater">お湯（g）</label><input type="number" inputmode="decimal" id="rWater" value="${esc(rec?rec.water:225)}"></div></div>
+    <div class="field"><label for="rTemp">湯温（℃）</label><input type="number" inputmode="numeric" id="rTemp" value="${esc(rec?rec.temp:90)}"></div>
+    <div class="field"><span class="t">手順（名前、秒数、そこまでの合計のお湯 g）</span><div id="rSteps"></div><div style="margin-top:8px"><button class="btn" id="rAdd">手順を足す</button></div></div>
+    ${rec&&!used&&D.recipes.length>1?'<div class="field"><button class="btn" id="rDel">この淹れ方を消す</button></div>':''}
+  </div><footer><div class="err" id="rErr" hidden></div><button class="btn main" id="rSave">保存する</button></footer></div>`;
+  const read=()=>{$('rSteps').querySelectorAll('.stepRow').forEach((row,i)=>{const[a,b,c]=row.querySelectorAll('input');steps[i]={label:a.value.trim(),sec:+b.value||0,to:+c.value||0};});};
+  const draw=()=>{
+    $('rSteps').innerHTML=steps.map(s=>`<div class="stepRow"><input type="text" aria-label="手順の名前" value="${esc(s.label)}"><input type="number" inputmode="numeric" aria-label="秒数" value="${esc(s.sec)}"><input type="number" inputmode="numeric" aria-label="合計のお湯" value="${esc(s.to)}"><button type="button" aria-label="この手順を消す">×</button></div>`).join('');
+    $('rSteps').querySelectorAll('.stepRow button').forEach((b,i)=>b.onclick=()=>{read();steps.splice(i,1);draw();});
+  };
+  draw();
+  const close=()=>{L.innerHTML='';};
+  $('rClose').onclick=close;
+  $('rAdd').onclick=()=>{read();const l=steps[steps.length-1];steps.push({label:'',sec:30,to:l?l.to:0});draw();};
+  $('rSave').onclick=async()=>{
+    read();const name=$('rName').value.trim(),clean=steps.filter(s=>s.label&&s.sec>0);
+    const err=m=>{$('rErr').hidden=false;$('rErr').textContent=m;};
+    if(!name)return err('名前を入れてください。');
+    if(!clean.length)return err('手順を1つ以上入れてください。名前と秒数が必要です。');
+    const o={id:rec?rec.id:uid(),at:rec?rec.at:Date.now(),name,dose:+$('rDose').value||15,water:+$('rWater').value||225,temp:+$('rTemp').value||90,steps:clean};
+    await save('recipes',o);close();done&&done(o);
+  };
+  if($('rDel')){let armed=false;$('rDel').onclick=async()=>{if(!armed){armed=true;$('rDel').textContent='もう一度押すと消します';return;}await remove('recipes',rec.id);close();done&&done(D.recipes[0]);};}
+}
+function runTimer(d){
+  const rec=D.recipes.find(r=>r.id===d.recipe),be=beanOf(buyOf(d.buy).bean);
+  const k=rec.water?d.water/rec.water:1;
+  const steps=rec.steps.map(s=>({label:s.label,sec:s.sec,to:Math.round(s.to*k)}));
+  let t=0;const ends=steps.map(s=>t+=s.sec);
+  const host=document.createElement('div');document.body.append(host);
+  let sound=kv('sound')!=='0',ac=null,started=false,base=0,pausedAt=0,paused=false,lock=null,cur=-1,timer=0,stopped=false;
+  const beep=()=>{if(!sound||!ac)return;try{const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=880;g.gain.value=.18;o.connect(g).connect(ac.destination);o.start();o.stop(ac.currentTime+.13);}catch(e){}};
+  const wake=async()=>{try{if('wakeLock'in navigator&&!lock&&!stopped){lock=await navigator.wakeLock.request('screen');lock.addEventListener('release',()=>{lock=null;});}}catch(e){}};
+  const onVis=()=>{if(document.visibilityState==='visible'&&started)wake();};
+  document.addEventListener('visibilitychange',onVis);
+  const elapsed=()=>!started?0:((paused?pausedAt:Date.now())-base)/1000;
+  const prevEnd=i=>i?ends[i-1]:0;
+  const pourOf=i=>Math.max(0,steps[i].to-(i?steps[i-1].to:0));
+  host.innerHTML=`<div id="timer"><div class="top"><div class="bean-name">${esc(be.name)}</div><button id="tSound"></button></div>
+    <div class="now"><div class="step" id="tStep"></div><div class="goal"><span id="tGoal"></span><small>gまで</small></div><div class="pour" id="tPour"></div><div class="clock" id="tClock">0:00</div><div class="bar"><i id="tBar" style="width:0"></i></div></div>
+    <ol id="tList">${steps.map(s=>`<li><span>${esc(s.label)}</span><span>${s.to}g</span></li>`).join('')}</ol>
+    <div class="ctl"><button id="tStop">やめる</button><button id="tNext" hidden>次へ</button><button id="tGo" class="go">スタート</button></div></div>`;
+  const li=[...host.querySelectorAll('#tList li')];
+  const soundBtn=()=>{$('tSound').textContent=sound?'音あり':'音なし';};soundBtn();
+  $('tSound').onclick=()=>{sound=!sound;kv('sound',sound?'1':'0');soundBtn();};
+  const paintStep=i=>{
+    cur=i;$('tStep').textContent=steps[i].label;$('tGoal').textContent=steps[i].to;
+    $('tPour').textContent=pourOf(i)?`${pourOf(i)}g 注ぐ`:'待つ';
+    li.forEach((l,n)=>{l.className=n===i?'on':n<i?'past':'';});
+  };
+  paintStep(0);
+  const finish=()=>{const secs=Math.round(elapsed());stop();host.remove();brewFinish(d,secs);};
+  const stop=()=>{stopped=true;clearInterval(timer);document.removeEventListener('visibilitychange',onVis);if(lock){lock.release().catch(()=>{});lock=null;}if(ac)ac.close().catch(()=>{});};
+  const tick=()=>{
+    const e=elapsed();
+    if(e>=ends[ends.length-1]){beep();return finish();}
+    const i=ends.findIndex(x=>e<x);
+    if(i!==cur){paintStep(i);if(navigator.vibrate)navigator.vibrate([160,80,160]);beep();}
+    $('tClock').textContent=mmss(Math.floor(e));
+    $('tBar').style.width=Math.min(100,(e-prevEnd(i))/(ends[i]-prevEnd(i))*100)+'%';
+  };
+  $('tGo').onclick=()=>{
+    if(!started){
+      started=true;base=Date.now();
+      try{ac=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}
+      wake();timer=setInterval(tick,120);
+      $('tNext').hidden=false;$('tGo').textContent='止める';$('tGo').classList.remove('go');
+      return;
+    }
+    if(!paused){paused=true;pausedAt=Date.now();$('tGo').textContent='再開';$('tGo').classList.add('go');}
+    else{base+=Date.now()-pausedAt;paused=false;$('tGo').textContent='止める';$('tGo').classList.remove('go');}
+  };
+  /* 「次へ」：今の手順をここで終わりにして、以降の時間を前へずらす */
+  $('tNext').onclick=()=>{const e=elapsed(),i=ends.findIndex(x=>e<x);if(i<0)return;const shift=e-ends[i];for(let j=i;j<ends.length;j++)ends[j]+=shift;tick();};
+  let armed=false;
+  $('tStop').onclick=()=>{if(!started){stop();host.remove();brewSetup(d.buy,d);return;}if(!armed){armed=true;$('tStop').textContent='もう一度で中止';setTimeout(()=>{armed=false;if($('tStop'))$('tStop').textContent='やめる';},3000);return;}stop();host.remove();brewSetup(d.buy,d);};
+}
+function brewFinish(d,secs){
+  const L=$('layer1'),f={rating:null,taste:null};
+  const be=beanOf(buyOf(d.buy).bean);
+  L.innerHTML=`<div class="over"><header><h2>どうでしたか</h2><button id="zSkip">記録しない</button></header><div class="scroll">
+    <p class="memo" style="margin-top:14px">${esc(be.name)}　${mmss(secs)}で淹れました</p>
+    <div class="field"><div class="chips" id="zRate"></div></div>
+    <div class="field"><span class="t">味のチャート（書かなくても大丈夫です）</span><div id="zTaste"></div></div>
+    <div class="field"><label for="zMemo">メモ</label><textarea id="zMemo"></textarea></div>
+  </div><footer><div class="err" id="zErr" hidden></div><button class="btn main" id="zSave">記録する</button></footer></div>`;
+  const rate=()=>{const el=$('zRate');el.innerHTML=[2,1,0].map(v=>`<button type="button" class="chip" aria-pressed="${f.rating===v}" data-v="${v}">${RATE[v]}</button>`).join('');el.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{const v=+b.dataset.v;f.rating=f.rating===v?null:v;rate();});};
+  rate();
+  const prevT=brewsOf(be.id).find(x=>x.taste)?.taste;
+  tasteInput($('zTaste'),()=>f.taste,v=>{f.taste=v;},prevT||buyOf(d.buy).shopTaste||null);
+  const back=()=>{L.innerHTML='';state.buy=d.buy;drawDetail(buyOf(d.buy));};
+  let armed=false;
+  $('zSkip').onclick=()=>{if(!armed){armed=true;$('zSkip').textContent='もう一度で閉じる';return;}back();};
+  $('zSave').onclick=async()=>{
+    try{await save('brews',{id:uid(),at:Date.now(),date:today(),buy:d.buy,recipe:d.recipe,mill:d.mill,dripper:d.dripper||null,grind:d.grind,dose:d.dose,water:d.water,temp:d.temp,secs,rating:f.rating,taste:f.taste,memo:$('zMemo').value.trim()});back();}
+    catch(e){$('zErr').hidden=false;$('zErr').textContent='保存できませんでした。もう一度押してください。';}
+  };
+}
+function openBrewView(id){
+  const x=D.brews.find(b=>b.id===id);if(!x)return;
+  const L=$('layer2'),m=D.tools.find(t=>t.id===x.mill),rec=D.recipes.find(r=>r.id===x.recipe),be=beanOf(buyOf(x.buy)?.bean)||{};
+  L.innerHTML=`<div class="over"><header><h2>この一杯</h2><button id="vClose">閉じる</button></header><div class="scroll"><p class="memo" style="margin-top:14px">${esc(be.name)}</p>
+    <dl>${[['日付',jd(x.date)],['評価',x.rating!=null?RATE[x.rating]:''],['淹れ方',rec&&rec.name],['ミル',m&&`${m.name} ${grindText(x.grind,m)}`],['豆',x.dose+'g'],['お湯',x.water+'g'],['湯温',x.temp+'℃'],['時間',mmss(x.secs)]].filter(r=>r[1]).map(r=>`<dt>${r[0]}</dt><dd>${esc(r[1])}</dd>`).join('')}</dl>
+    ${x.taste?`<div style="margin-top:12px">${radar(x.taste,null)}</div>`:''}${x.memo?`<p class="memo">${esc(x.memo)}</p>`:''}
+    <div class="field"><button class="btn" id="vDel">この一杯を消す</button></div></div></div>`;
+  $('vClose').onclick=()=>{L.innerHTML='';};
+  let armed=false;
+  $('vDel').onclick=async()=>{if(!armed){armed=true;$('vDel').textContent='もう一度押すと消します';return;}await remove('brews',id);L.innerHTML='';const b=state.buy&&buyOf(state.buy);if(b)drawDetail(b);};
+}
+
 /* ---------- 起動 ---------- */
 const MB='https://api.mapbox.com/mapbox-gl-js/v3.9.0';
 function initMap(){
   mapboxgl.accessToken=TOKEN;
-  map=new mapboxgl.Map({container:'map',style:'mapbox://styles/mapbox/light-v11',center:HOME,zoom:1,projection:'globe'});
+  map=new mapboxgl.Map({container:'map',style:'mapbox://styles/mapbox/light-v11',center:HOME,zoom:1,projection:'globe',pixelRatio:Math.min(devicePixelRatio||1,2)});
   map.jumpTo({zoom:globeZoom()});
   map.on('style.load',()=>{addLayers();opening();});
   map.on('error',e=>{const st=e.error&&e.error.status;if((st===401||st===403)&&e.sourceId!=='sat')fail('地図を読み込めません。MapboxのトークンのURL制限に、このページのアドレスを追加してください。');});
@@ -773,6 +1065,7 @@ function loadMap(){
   setTimeout(()=>{if(!ready)fail('地球儀は通信できるときに表示されます。記録はこのまま使えます。');},10000);
 }
 $('add').onclick=()=>openForm({});
+$('brewBtn').onclick=()=>openBrew();
 $('moreBtn').onclick=openMore;
 (async()=>{
   try{await openDB();await dbLoad();}
